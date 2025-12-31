@@ -2,59 +2,82 @@ import React, { useState } from 'react';
 import { Check } from 'lucide-react';
 import Navbar from '../common/Navbar';
 
-const SymptomTestPage = ({ onNavigate }) => {
+const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [answers, setAnswers] = useState({});
 
   const questions = [
     {
       id: 1,
       question: "Do you have a persistent cough lasting more than 3 weeks?",
-      options: ["Yes", "No"]
+      options: ["Yes", "No"],
+      key: "persistent_cough"
     },
     {
       id: 2,
       question: "Have you experienced fever, especially in the evenings?",
-      options: ["Yes", "No"]
+      options: ["Yes", "No"],
+      key: "fever"
     },
     {
       id: 3,
       question: "Have you noticed unexplained weight loss recently?",
-      options: ["Yes", "No"]
+      options: ["Yes", "No"],
+      key: "weight_loss"
     },
     {
       id: 4,
       question: "Do you experience night sweats?",
-      options: ["Yes", "No"]
+      options: ["Yes", "No"],
+      key: "night_sweats"
     },
     {
       id: 5,
       question: "Have you coughed up blood or blood-tinged sputum?",
-      options: ["Yes", "No"]
+      options: ["Yes", "No"],
+      key: "blood_cough"
     },
     {
       id: 6,
       question: "Do you feel chest pain or discomfort?",
-      options: ["Yes", "No"]
+      options: ["Yes", "No"],
+      key: "chest_pain"
     },
     {
       id: 7,
       question: "Have you experienced fatigue or weakness?",
-      options: ["Yes", "No"]
+      options: ["Yes", "No"],
+      key: "fatigue"
     },
     {
       id: 8,
       question: "Have you been in close contact with someone diagnosed with TB?",
-      options: ["Yes", "No"]
+      options: ["Yes", "No"],
+      key: "tb_contact"
     }
   ];
 
   const handleAnswer = (answer) => {
-    setAnswers({...answers, [currentQuestion]: answer});
+    // Store the answer
+    const updatedAnswers = {
+      ...symptomAnswers,
+      [questions[currentQuestion].key]: answer
+    };
+    setSymptomAnswers(updatedAnswers);
+    
+    console.log("Updated symptom answers:", updatedAnswers);
+    
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
+      // All questions answered, move to X-ray upload
+      console.log("All symptoms recorded, moving to X-ray upload");
       onNavigate('xray-upload');
+    }
+  };
+
+  const handlePrevious = () => {
+    if (currentQuestion > 0) {
+      setCurrentQuestion(currentQuestion - 1);
     }
   };
 
@@ -62,7 +85,6 @@ const SymptomTestPage = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* Navigation */}
       <Navbar 
         showCancelButton={true}
         onCancel={() => onNavigate('patient-home')}
@@ -117,7 +139,7 @@ const SymptomTestPage = ({ onNavigate }) => {
             {/* Question Navigation */}
             {currentQuestion > 0 && (
               <button
-                onClick={() => setCurrentQuestion(currentQuestion - 1)}
+                onClick={handlePrevious}
                 className="mt-8 text-gray-600 hover:text-gray-900 font-medium"
               >
                 ← Previous Question

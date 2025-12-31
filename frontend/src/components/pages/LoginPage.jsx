@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Activity, Mail, Lock, Loader } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import api from '../../lib/api';
@@ -8,6 +8,19 @@ const LoginPage = ({ onNavigate }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  useEffect(() => {
+    // Check for OAuth callback
+    const handleOAuthCallback = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        console.log("OAuth session detected:", session.user.email);
+        // Let the auth state change handler in App.jsx handle the navigation
+      }
+    };
+    
+    handleOAuthCallback();
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -19,60 +32,96 @@ const LoginPage = ({ onNavigate }) => {
     setError('');
     
     try {
+      console.log("🔐 Attempting login with email:", email);
+      
       const { data, error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
-      if (authError) throw authError;
-      if (!data.user) throw new Error('No user data returned');
+      if (authError) {
+        console.error("❌ Supabase auth error:", authError);
+        throw authError;
+      }
+      
+      if (!data.user) {
+        throw new Error('No user data returned');
+      }
 
+      console.log("✅ Login successful, user:", data.user.email);
+      
+      // Wait a moment for the auth state change to propagate
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Check role and navigate
       await checkRoleAndNavigate(data.user);
 
     } catch (err) {
-      console.error('Login error:', err);
-      setError(err.response?.data?.error || err.message || 'Failed to sign in');
-    } finally {
+      console.error('❌ Login error:', err);
+      setError(err.message || 'Invalid email or password. Please try again.');
       setLoading(false);
     }
   };
 
-  // Separate function for Google Login
   const handleGoogleLogin = async () => {
     try {
+      setError('');
+      setLoading(true);
+      console.log("🔐 Starting Google OAuth...");
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          // This redirects back to your current page after login
-          redirectTo: window.location.origin, 
+          redirectTo: window.location.origin,
         },
       });
-      if (error) throw error;
+      
+      if (error) {
+        console.error("❌ Google OAuth error:", error);
+        throw error;
+      }
+      
+      // OAuth will redirect, so we don't need to do anything else
+      console.log("✅ Google OAuth initiated");
+      
     } catch (err) {
-      setError(err.message);
+      console.error("❌ Google login error:", err);
+      setError(err.message || 'Failed to sign in with Google');
+      setLoading(false);
     }
   };
 
-  // Helper to handle navigation logic
   const checkRoleAndNavigate = async (user) => {
     let role = null;
+    
     try {
+      console.log("🔎 Fetching user profile...");
       const response = await api.get('/profile/');
       role = response.data.role;
+      console.log("✅ Role from backend:", role);
     } catch (apiError) {
-      console.warn('API fetch failed, checking metadata...', apiError);
-      role = user.user_metadata?.role;
+      console.warn('⚠️ Backend profile fetch failed:', apiError.message);
+      // Fallback to user metadata
+      role = user.user_metadata?.role || 'patient';
+      console.log("🔄 Using fallback role:", role);
     }
 
+    // Navigate based on role
+    console.log("🧭 Navigating based on role:", role);
+    
     if (role === 'doctor') {
       onNavigate('doctor-home');
     } else {
       onNavigate('patient-home');
     }
+    
+    setLoading(false);
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter') handleLogin();
+    if (e.key === 'Enter' && !loading) {
+      handleLogin();
+    }
   };
 
   return (
@@ -87,12 +136,11 @@ const LoginPage = ({ onNavigate }) => {
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
           <div className="space-y-6">
             {error && (
-              <div className="bg-red-50 text-red-500 text-sm text-center py-2 rounded-lg border border-red-100">
+              <div className="bg-red-50 text-red-500 text-sm text-center py-3 px-4 rounded-lg border border-red-100">
                 {error}
               </div>
             )}
             
-            {/* Email Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
               <div className="relative">
@@ -102,13 +150,13 @@ const LoginPage = ({ onNavigate }) => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  disabled={loading}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter your email"
                 />
               </div>
             </div>
 
-            {/* Password Input */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Password</label>
               <div className="relative">
@@ -118,13 +166,13 @@ const LoginPage = ({ onNavigate }) => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                  disabled={loading}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Enter your password"
                 />
               </div>
             </div>
 
-            {/* Main Sign In Button */}
             <button
               onClick={handleLogin}
               disabled={loading}
@@ -140,20 +188,18 @@ const LoginPage = ({ onNavigate }) => {
               )}
             </button>
 
-            {/* Divider */}
             <div className="relative flex py-2 items-center">
               <div className="flex-grow border-t border-gray-200"></div>
               <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">Or continue with</span>
               <div className="flex-grow border-t border-gray-200"></div>
             </div>
 
-            {/* Google Button */}
             <button
               type="button"
               onClick={handleGoogleLogin}
-              className="w-full py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium flex justify-center items-center gap-3"
+              disabled={loading}
+              className="w-full py-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium flex justify-center items-center gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {/* Google SVG Logo */}
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path
                   d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
@@ -172,14 +218,15 @@ const LoginPage = ({ onNavigate }) => {
                   fill="#EA4335"
                 />
               </svg>
-              Sign in with Google
+              {loading ? 'Please wait...' : 'Sign in with Google'}
             </button>
 
             <div className="text-center">
               <span className="text-gray-600">Don't have an account? </span>
               <button 
                 onClick={() => onNavigate('signup')} 
-                className="text-blue-600 hover:text-blue-700 font-medium hover:underline"
+                disabled={loading}
+                className="text-blue-600 hover:text-blue-700 font-medium hover:underline disabled:opacity-50"
               >
                 Sign Up
               </button>

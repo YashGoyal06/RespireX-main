@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CheckCircle, Calendar, FileText, Download, Activity, Loader, AlertCircle } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
-import api from '../../lib/api'; // Ensure this is your configured Axios instance
+import api from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 
 const TestHistoryPage = ({ onNavigate }) => {
@@ -17,65 +17,132 @@ const TestHistoryPage = ({ onNavigate }) => {
   const fetchTestHistory = async () => {
     try {
       setLoading(true);
+      setError(null);
       
-      // 1. Ensure user is authenticated
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error("User not authenticated");
+      // Check if user is authenticated
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        setError("Please log in to view your history");
+        setLoading(false);
+        return;
+      }
 
-      // 2. Fetch data from Django Backend
-      // Adjust the endpoint '/tests/' to match your actual Django URL (e.g., '/api/history/')
-      const response = await api.get('/tests/'); 
+      console.log("Fetching test history...");
       
-      // 3. Transform data if necessary to match UI structure
-      // Assuming backend returns: { id, created_at, result (string), confidence (0-1 or 0-100), risk_level }
+      // Fetch from backend - adjust endpoint to match your Django URLs
+      const response = await api.get('/history/');
+      
+      console.log("History response:", response.data);
+      
+      // Transform data
       const formattedData = response.data.map(test => ({
         id: test.id,
-        date: new Date(test.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        fullDate: new Date(test.created_at).toLocaleString('en-US', { dateStyle: 'long', timeStyle: 'short' }),
-        result: test.result || 'Unknown', // e.g., "Positive" or "Negative"
-        confidence: test.confidence > 1 ? test.confidence : Math.round(test.confidence * 100), // Handle 0.95 vs 95
-        riskLevel: test.risk_level || 'Low' // e.g., "High", "Medium", "Low"
+        date: new Date(test.date_tested).toLocaleDateString('en-US', { 
+          month: 'short', 
+          day: 'numeric', 
+          year: 'numeric' 
+        }),
+        fullDate: new Date(test.date_tested).toLocaleString('en-US', { 
+          dateStyle: 'long', 
+          timeStyle: 'short' 
+        }),
+        result: test.result || 'Unknown',
+        confidence: test.confidence_score > 1 
+          ? Math.round(test.confidence_score) 
+          : Math.round(test.confidence_score * 100),
+        riskLevel: test.risk_level || 'Low',
+        xrayUrl: test.xray_image_url || null
       }));
 
       setTests(formattedData);
+      console.log("Formatted tests:", formattedData);
+      
     } catch (err) {
       console.error("Failed to fetch history:", err);
-      setError("Could not load test history. Please try again later.");
+      
+      // More specific error messages
+      if (err.response?.status === 401) {
+        setError("Session expired. Please log in again.");
+      } else if (err.response?.status === 404) {
+        setError("History endpoint not found. Please check backend configuration.");
+      } else {
+        setError(err.response?.data?.error || "Could not load test history. Please try again later.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper to handle download (placeholder for now)
-  const handleDownload = (testId) => {
-    // Implement actual PDF download logic here if backend supports it
-    alert(`Downloading report for Test #${testId}...`);
+  const handleDownload = (test) => {
+    const reportContent = `
+TB Screening Report
+==================
+Test ID: ${test.id}
+Date: ${test.fullDate}
+Result: ${test.result}
+Confidence: ${test.confidence}%
+Risk Level: ${test.riskLevel}
+
+Note: This is a preliminary screening result. Please consult a healthcare professional.
+    `;
+    
+    const blob = new Blob([reportContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `TB_Report_${test.id}_${test.date.replace(/\s/g, '_')}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
   };
 
-  // --- Loading State ---
+  // Loading State
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
-        <Loader className="w-12 h-12 text-blue-600 animate-spin mb-4" />
-        <p className="text-gray-600 font-medium">Loading your history...</p>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navbar 
+          showBackButton={true}
+          onBack={() => onNavigate('patient-home')}
+        />
+        <div className="flex-grow flex items-center justify-center">
+          <div className="text-center">
+            <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600 font-medium">Loading your history...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  // --- Error State ---
+  // Error State
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4">
-        <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
-          <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Data</h3>
-          <p className="text-gray-600 mb-6">{error}</p>
-          <button 
-            onClick={() => onNavigate('patient-home')}
-            className="px-6 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition"
-          >
-            Go Back Home
-          </button>
+      <div className="min-h-screen bg-gray-50 flex flex-col">
+        <Navbar 
+          showBackButton={true}
+          onBack={() => onNavigate('patient-home')}
+        />
+        <div className="flex-grow flex items-center justify-center px-4">
+          <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
+            <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Data</h3>
+            <p className="text-gray-600 mb-6">{error}</p>
+            <div className="flex space-x-4">
+              <button 
+                onClick={fetchTestHistory}
+                className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
+              >
+                Try Again
+              </button>
+              <button 
+                onClick={() => onNavigate('patient-home')}
+                className="flex-1 px-6 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition"
+              >
+                Go Back
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -83,7 +150,6 @@ const TestHistoryPage = ({ onNavigate }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
-      {/* Navigation */}
       <Navbar 
         showBackButton={true}
         onBack={() => onNavigate('patient-home')}
@@ -97,7 +163,7 @@ const TestHistoryPage = ({ onNavigate }) => {
             <p className="text-xl text-gray-600">View all your previous screening results</p>
           </div>
 
-          {/* Stats Overview (Dynamic) */}
+          {/* Stats Overview */}
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             {[
               { 
@@ -144,7 +210,6 @@ const TestHistoryPage = ({ onNavigate }) => {
                   <div className="p-8">
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-start space-x-6">
-                        {/* Dynamic Icon/Color based on Result */}
                         <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ${
                           test.result.toLowerCase() === 'positive' 
                             ? 'bg-gradient-to-br from-red-400 to-red-500' 
@@ -169,7 +234,7 @@ const TestHistoryPage = ({ onNavigate }) => {
                         </div>
                       </div>
                       <button 
-                        onClick={() => handleDownload(test.id)}
+                        onClick={() => handleDownload(test)}
                         className="px-6 py-3 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold flex items-center space-x-2"
                       >
                         <Download className="w-5 h-5" />
@@ -213,7 +278,6 @@ const TestHistoryPage = ({ onNavigate }) => {
                 </div>
               ))
             ) : (
-              // Empty State
               <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-16 text-center">
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-12 h-12 text-gray-400" />
@@ -243,7 +307,6 @@ const TestHistoryPage = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Footer */}
       <Footer />
     </div>
   );

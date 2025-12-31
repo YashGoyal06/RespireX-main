@@ -3,15 +3,21 @@ import { Upload, Image, Check, Loader, AlertTriangle } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import api from '../../lib/api';
 
-const XRayUploadPage = ({ onNavigate }) => {
+const XRayUploadPage = ({ onNavigate, symptomAnswers = {} }) => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];
     if (selectedFile) {
+      if (!selectedFile.type.startsWith('image/')) {
+        setError('Please select a valid image file');
+        return;
+      }
+      setError('');
       setFile(selectedFile);
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -38,41 +44,50 @@ const XRayUploadPage = ({ onNavigate }) => {
     
     const droppedFile = e.dataTransfer.files[0];
     if (droppedFile && droppedFile.type.startsWith('image/')) {
+      setError('');
       setFile(droppedFile);
       const reader = new FileReader();
       reader.onloadend = () => {
         setPreview(reader.result);
       };
       reader.readAsDataURL(droppedFile);
+    } else {
+      setError('Please drop a valid image file');
     }
   };
 
   const handleAnalyze = async () => {
-    if (!file) return;
+    if (!file) {
+      setError('Please upload an X-ray image');
+      return;
+    }
+
     setLoading(true);
+    setError('');
 
     const formData = new FormData();
     formData.append('file', file);
-    // Passing empty symptoms object for now (can be expanded if Step 1 data is available)
-    formData.append('symptoms', JSON.stringify({})); 
+    formData.append('symptoms', JSON.stringify(symptomAnswers || {}));
 
     try {
+      console.log("Uploading X-ray for analysis...");
       const response = await api.post('/predict/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      // Logic Update: Pass the API result and image to the Results Page
-      // This allows the next screen to display the graph/percentages
-      onNavigate('analysis-result', { 
+      console.log("Analysis response:", response.data);
+      
+      // Navigate to results page with data
+      onNavigate('test-result', { 
         result: response.data,
-        originalImage: preview 
+        originalImage: preview,
+        uploadDate: new Date().toISOString()
       });
 
     } catch (err) {
       console.error("Prediction Error:", err);
-      // Fallback error handling
-      const errorMessage = err.response?.data?.error || err.message || "Server connection failed";
-      alert("Analysis failed: " + errorMessage);
+      const errorMessage = err.response?.data?.error || err.message || "Analysis failed. Please try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -96,6 +111,13 @@ const XRayUploadPage = ({ onNavigate }) => {
           </div>
 
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 animate-scale">
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-3 text-red-700">
+                <AlertTriangle className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium">{error}</span>
+              </div>
+            )}
+
             {!preview ? (
               <div
                 onDragEnter={handleDrag}
@@ -160,8 +182,10 @@ const XRayUploadPage = ({ onNavigate }) => {
                     onClick={() => {
                       setFile(null);
                       setPreview(null);
+                      setError('');
                     }}
-                    className="text-red-600 hover:text-red-700 font-semibold"
+                    disabled={loading}
+                    className="text-red-600 hover:text-red-700 font-semibold disabled:opacity-50"
                   >
                     Remove
                   </button>
@@ -173,18 +197,26 @@ const XRayUploadPage = ({ onNavigate }) => {
                       type="file"
                       accept="image/*"
                       onChange={handleFileChange}
+                      disabled={loading}
                       className="hidden"
                     />
-                    <span className="block w-full py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 cursor-pointer text-center font-semibold text-lg transition">
+                    <span className={`block w-full py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 cursor-pointer text-center font-semibold text-lg transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
                       Change Image
                     </span>
                   </label>
                   <button
                     onClick={handleAnalyze}
                     disabled={loading}
-                    className="flex-1 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 font-semibold text-lg shadow-lg hover:shadow-xl btn-primary flex justify-center items-center"
+                    className="flex-1 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 font-semibold text-lg shadow-lg hover:shadow-xl btn-primary flex justify-center items-center disabled:opacity-70 disabled:cursor-not-allowed"
                   >
-                    {loading ? <Loader className="w-6 h-6 animate-spin" /> : 'Analyze X-Ray →'}
+                    {loading ? (
+                      <>
+                        <Loader className="w-6 h-6 animate-spin mr-2" />
+                        <span>Analyzing...</span>
+                      </>
+                    ) : (
+                      'Analyze X-Ray →'
+                    )}
                   </button>
                 </div>
               </div>

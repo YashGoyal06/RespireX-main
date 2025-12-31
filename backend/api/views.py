@@ -7,6 +7,8 @@ import json
 from rest_framework.permissions import IsAuthenticated
 
 class UserProfileView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
     def post(self, request):
         user = request.user
         data = request.data
@@ -30,6 +32,7 @@ class UserProfileView(views.APIView):
 
 class PredictionView(views.APIView):
     permission_classes = [IsAuthenticated]
+    
     def post(self, request):
         try:
             user_profile = request.user.profile
@@ -42,14 +45,17 @@ class PredictionView(views.APIView):
         if not image_file:
             return response.Response({"error": "No image provided"}, status=400)
 
-        # 1. Upload to Supabase
-        image_url = upload_to_supabase(image_file)
+        # Upload to Supabase
+        try:
+            image_url = upload_to_supabase(image_file)
+        except Exception as e:
+            return response.Response({"error": f"Image upload failed: {str(e)}"}, status=500)
         
-        # 2. ML Prediction
+        # ML Prediction
         image_file.seek(0)
         result, confidence, risk_level = predict_xray(image_file)
         
-        # 3. Save to DB
+        # Save to DB
         test_record = TestResult.objects.create(
             patient=user_profile,
             xray_image_url=image_url,
@@ -61,18 +67,28 @@ class PredictionView(views.APIView):
         return response.Response(TestResultSerializer(test_record).data)
 
 class PatientHistoryView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request):
         try:
             profile = request.user.profile
             results = TestResult.objects.filter(patient=profile).order_by('-date_tested')
             return response.Response(TestResultSerializer(results, many=True).data)
-        except:
-            return response.Response([])
+        except UserProfile.DoesNotExist:
+            return response.Response({"error": "Profile not found"}, status=404)
+        except Exception as e:
+            return response.Response({"error": str(e)}, status=500)
 
 class DoctorDashboardView(views.APIView):
+    permission_classes = [IsAuthenticated]
+    
     def get(self, request):
-        if not hasattr(request.user, 'profile') or request.user.profile.role != 'doctor':
-            return response.Response({"error": "Unauthorized"}, status=403)
+        try:
+            profile = request.user.profile
+            if profile.role != 'doctor':
+                return response.Response({"error": "Unauthorized"}, status=403)
+        except UserProfile.DoesNotExist:
+            return response.Response({"error": "Profile not found"}, status=404)
             
         state_filter = request.query_params.get('state', 'all')
         queryset = TestResult.objects.all().select_related('patient').order_by('-date_tested')
@@ -84,7 +100,8 @@ class DoctorDashboardView(views.APIView):
             "stats": {
                 "total": queryset.count(),
                 "positive": queryset.filter(result='Positive').count(),
-                "negative": queryset.filter(result='Negative').count()
+                "negative": queryset.filter(result='Negative').count(),
+                "underReview": 0  # Can be calculated based on your logic
             },
             "records": TestResultSerializer(queryset, many=True).data
         })
