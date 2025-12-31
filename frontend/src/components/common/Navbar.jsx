@@ -2,19 +2,21 @@ import React from 'react';
 import { LogOut, ArrowLeft, X } from 'lucide-react';
 
 const Navbar = ({ 
+  isLoggedIn,         // <--- New Direct Switch
   onLogout, 
   onBack, 
   onCancel, 
   onLogin, 
   userType, 
   showBackButton, 
-  showCancelButton, 
-  showLoginButton 
+  showCancelButton 
 }) => {
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-gray-100">
+    <nav className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-gray-100 bg-white/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
+          
+          {/* Logo Section */}
           <div className="flex items-center space-x-3">
             <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
               RespireX
@@ -30,7 +32,10 @@ const Navbar = ({
             )}
           </div>
 
+          {/* Buttons Section */}
           <div className="flex items-center space-x-4">
+            
+            {/* Back Button */}
             {showBackButton && onBack && (
               <button
                 onClick={onBack}
@@ -41,6 +46,7 @@ const Navbar = ({
               </button>
             )}
 
+            {/* Cancel Button */}
             {showCancelButton && onCancel && (
               <button
                 onClick={onCancel}
@@ -51,24 +57,27 @@ const Navbar = ({
               </button>
             )}
 
-            {showLoginButton && onLogin && (
+            {/* --- LOGIC SWITCH --- */}
+            
+            {/* Case 1: Agar Logged In hai -> Show LOGOUT */}
+            {isLoggedIn ? (
+              <button
+                onClick={onLogout}
+                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition group"
+              >
+                <LogOut className="w-5 h-5 group-hover:text-red-600" />
+                <span className="font-medium">Logout</span>
+              </button>
+            ) : (
+              /* Case 2: Agar Logged Out hai -> Show SIGN IN */
               <button
                 onClick={onLogin}
-                className="px-8 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition font-medium shadow-lg hover:shadow-xl btn-primary"
+                className="px-8 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition font-medium shadow-lg hover:shadow-xl"
               >
                 Sign In
               </button>
             )}
 
-            {onLogout && (
-              <button
-                onClick={onLogout}
-                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition"
-              >
-                <LogOut className="w-5 h-5" />
-                <span className="font-medium">Logout</span>
-              </button>
-            )}
           </div>
         </div>
       </div>
