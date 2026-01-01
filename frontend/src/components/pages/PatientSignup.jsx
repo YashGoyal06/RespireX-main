@@ -63,7 +63,8 @@ const PatientSignup = ({ onNavigate, onBack }) => {
         options: {
           data: {
             full_name: formData.fullName,
-            phone: formData.phone, // Storing phone in metadata as backup
+            phone: formData.phone,
+            gender: formData.gender, // Storing phone in metadata as backup
           }
         }
       });
