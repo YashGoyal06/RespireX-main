@@ -2,12 +2,11 @@ import React from 'react';
 import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, XCircle } from 'lucide-react';
 import Navbar from '../common/Navbar';
 
-const TestResultPage = ({ onNavigate, resultData }) => {
-  // Parse the result data from the backend
+// 1. Accept user and onLogout
+const TestResultPage = ({ onNavigate, resultData, onLogout, user }) => {
   const result = resultData?.result || {};
   const xrayImage = resultData?.originalImage || null;
   
-  // Extract values from backend response
   const detected = result.result === 'Positive';
   const confidence = result.confidence_score || 0;
   const riskLevel = result.risk_level || 'Low';
@@ -22,7 +21,6 @@ const TestResultPage = ({ onNavigate, resultData }) => {
   });
 
   const handleDownload = () => {
-    // Create a simple report download
     const reportContent = `
 TB Screening Report
 ==================
@@ -58,9 +56,14 @@ Note: This is a preliminary screening result. Please consult a healthcare profes
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* 2. Update Navbar */}
       <Navbar 
         showBackButton={true}
         onBack={() => onNavigate('patient-home')}
+        isLoggedIn={true}    // <--- Forces logged in view
+        user={user}          // <--- Profile Picture
+        onLogout={onLogout}  // <--- Logout Button
+        userType="patient"   // <--- Badge
       />
 
       <div className="pt-32 pb-20 px-6">
