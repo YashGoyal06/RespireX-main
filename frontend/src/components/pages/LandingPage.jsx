@@ -13,8 +13,16 @@ const LandingPage = ({ onNavigate }) => {
       />
 
       {/* Hero Section - Centered Text Only */}
-      <div className="pt-48 pb-20 px-6 lg:px-8 text-center">
-        <div className="max-w-5xl mx-auto">
+      <div 
+        className="relative pt-48 pb-20 px-6 lg:px-8 text-center bg-cover bg-center bg-no-repeat"
+        style={{
+          backgroundImage: "url('/landing_page_bg.jpg')" 
+        }}
+      >
+        <div className="absolute inset-0 bg-white/60"></div>
+
+        {/* Content Container - Added relative and z-10 to sit on top of image/overlay */}
+        <div className="relative z-10 max-w-5xl mx-auto">
           <div className="inline-block px-4 py-2 bg-blue-50 rounded-full mb-8 animate-fade-in">
             <span className="text-sm font-semibold text-blue-600">AI-Powered Healthcare</span>
           </div>
