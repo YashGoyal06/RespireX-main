@@ -3,16 +3,32 @@ import { Zap, TrendingUp, Shield, ChevronRight } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
-const LandingPage = ({ onNavigate }) => {
+const LandingPage = ({ onNavigate, user, onLogout }) => {
+  
+  // Helper: Logic to handle where "Get Started" takes you
+  const handleGetStarted = () => {
+    if (user) {
+      // If logged in, go straight to Patient Home
+      onNavigate('patient-home');
+    } else {
+      // If not logged in, go to Sign Up / Role Selection
+      onNavigate('signup');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
-      {/* Common Navigation */}
+      
+      {/* Navigation */}
       <Navbar 
-        showLoginButton={true}
         onLogin={() => onNavigate('login')}
+        onNavigate={onNavigate} 
+        isLoggedIn={!!user}     
+        user={user}             
+        onLogout={onLogout}     
       />
 
-      {/* Hero Section - Centered Text Only */}
+      {/* Hero Section */}
       <div 
         className="relative pt-48 pb-20 px-6 lg:px-8 text-center bg-cover bg-center bg-no-repeat"
         style={{
@@ -21,7 +37,6 @@ const LandingPage = ({ onNavigate }) => {
       >
         <div className="absolute inset-0 bg-white/60"></div>
 
-        {/* Content Container - Added relative and z-10 to sit on top of image/overlay */}
         <div className="relative z-10 max-w-5xl mx-auto">
           <div className="inline-block px-4 py-2 bg-blue-50 rounded-full mb-8 animate-fade-in">
             <span className="text-sm font-semibold text-blue-600">AI-Powered Healthcare</span>
@@ -41,7 +56,7 @@ const LandingPage = ({ onNavigate }) => {
 
           <div className="flex justify-center animate-fade-in stagger-3">
             <button
-              onClick={() => onNavigate('login')}
+              onClick={handleGetStarted}
               className="group px-10 py-5 bg-gray-900 text-white text-lg rounded-full hover:bg-gray-800 transition shadow-2xl hover:shadow-3xl flex items-center space-x-3 btn-primary"
             >
               <span className="font-medium">Get Started</span>
@@ -56,7 +71,6 @@ const LandingPage = ({ onNavigate }) => {
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             
-            {/* Left Column: Why Choose & Features */}
             <div className="order-2 lg:order-1">
               <div className="mb-10 animate-fade-in">
                 <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Why Choose RespireX</h2>
@@ -100,7 +114,6 @@ const LandingPage = ({ onNavigate }) => {
               </div>
             </div>
 
-            {/* Right Column: The Image */}
             <div className="order-1 lg:order-2 relative animate-fade-in stagger-4">
               <div className="relative z-10">
                 <div className="relative w-full h-[400px] rounded-3xl overflow-hidden shadow-2xl">
@@ -111,7 +124,6 @@ const LandingPage = ({ onNavigate }) => {
                   />
                 </div>
               </div>
-              {/* Floating elements */}
               <div className="absolute -top-6 -right-6 w-32 h-32 bg-blue-600 rounded-3xl opacity-10 animate-pulse"></div>
               <div className="absolute -bottom-6 -left-6 w-24 h-24 bg-cyan-600 rounded-3xl opacity-10 animate-pulse" style={{animationDelay: '1s'}}></div>
             </div>
@@ -148,7 +160,7 @@ const LandingPage = ({ onNavigate }) => {
             Join thousands using RespireX for TB screening
           </p>
           <button
-            onClick={() => onNavigate('login')}
+            onClick={handleGetStarted}
             className="px-10 py-5 bg-white text-gray-900 text-lg rounded-full hover:bg-gray-100 transition shadow-2xl font-semibold btn-primary animate-fade-in stagger-2"
           >
             Start Your Test
@@ -156,7 +168,6 @@ const LandingPage = ({ onNavigate }) => {
         </div>
       </div>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
