@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Check } from 'lucide-react';
 import Navbar from '../common/Navbar';
 
-const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers }) => {
+// 1. Accept user and onLogout
+const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
 
   const questions = [
@@ -57,20 +58,15 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers }) => {
   ];
 
   const handleAnswer = (answer) => {
-    // Store the answer
     const updatedAnswers = {
       ...symptomAnswers,
       [questions[currentQuestion].key]: answer
     };
     setSymptomAnswers(updatedAnswers);
     
-    console.log("Updated symptom answers:", updatedAnswers);
-    
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
-      // All questions answered, move to X-ray upload
-      console.log("All symptoms recorded, moving to X-ray upload");
       onNavigate('xray-upload');
     }
   };
@@ -85,9 +81,14 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* 2. Update Navbar */}
       <Navbar 
         showCancelButton={true}
         onCancel={() => onNavigate('patient-home')}
+        isLoggedIn={true}    // <--- Forces logged in view
+        user={user}          // <--- Profile Picture
+        onLogout={onLogout}  // <--- Logout Button
+        userType="patient"   // <--- Badge
       />
 
       {/* Progress Bar */}
@@ -136,7 +137,6 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers }) => {
               ))}
             </div>
 
-            {/* Question Navigation */}
             {currentQuestion > 0 && (
               <button
                 onClick={handlePrevious}
@@ -147,7 +147,6 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers }) => {
             )}
           </div>
 
-          {/* Info Card */}
           <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-6 text-center animate-fade-in">
             <p className="text-gray-600">
               <span className="font-semibold text-gray-900">Privacy Note:</span> Your responses are confidential and used only for screening purposes
