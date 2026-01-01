@@ -1,8 +1,9 @@
 import React from 'react';
-import { LogOut, ArrowLeft, X } from 'lucide-react';
+import { LogOut, ArrowLeft, X, User } from 'lucide-react';
 
 const Navbar = ({ 
-  isLoggedIn,         // <--- New Direct Switch
+  isLoggedIn, 
+  user, 
   onLogout, 
   onBack, 
   onCancel, 
@@ -11,6 +12,51 @@ const Navbar = ({
   showBackButton, 
   showCancelButton 
 }) => {
+
+  // ✅ CORRECT PATHS: Use absolute paths ('/') for files in the 'public' folder
+  const DOCTOR_DEFAULT_IMG = "/doctorpfp.jpg"; 
+  const PATIENT_MALE_IMG = "/male.jpg";
+  const PATIENT_FEMALE_IMG = "/female.jpg";
+  const PATIENT_DEFAULT_IMG = "/male.jpg"; // Fallback image
+
+  // Helper: Get Display Name
+  const getDisplayName = () => {
+    // 1. Doctor Special Case
+    if (userType === 'doctor') return 'Doctor';
+
+    // 2. Standard User Checks
+    if (!user) return 'Guest';
+    if (user.user_metadata?.full_name) return user.user_metadata.full_name;
+    if (user.email) return user.email.split('@')[0];
+    return 'User';
+  };
+
+  // Helper: Get Avatar URL based on Role and Gender
+  const getAvatarUrl = () => {
+    // 1. DOCTOR LOGIC (Check this FIRST to ignore null 'user')
+    if (userType === 'doctor') {
+      return DOCTOR_DEFAULT_IMG;
+    }
+
+    // If not a doctor, we need the user object to proceed
+    if (!user) return null;
+
+    // 2. PATIENT LOGIC
+    if (userType === 'patient') {
+      // Check gender from Supabase metadata (saved during signup)
+      const gender = user.user_metadata?.gender?.toLowerCase(); 
+
+      if (gender === 'female') return PATIENT_FEMALE_IMG;
+      if (gender === 'male') return PATIENT_MALE_IMG;
+      
+      // Fallback if gender is 'other' or undefined
+      return PATIENT_DEFAULT_IMG; 
+    }
+
+    // 3. GOOGLE / GENERAL FALLBACK
+    return user.user_metadata?.avatar_url || null;
+  };
+
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-gray-100 bg-white/80 backdrop-blur-md">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
@@ -57,19 +103,50 @@ const Navbar = ({
               </button>
             )}
 
-            {/* --- LOGIC SWITCH --- */}
+            {/* --- AUTH BUTTONS SWITCH --- */}
             
-            {/* Case 1: Agar Logged In hai -> Show LOGOUT */}
             {isLoggedIn ? (
-              <button
-                onClick={onLogout}
-                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition group"
-              >
-                <LogOut className="w-5 h-5 group-hover:text-red-600" />
-                <span className="font-medium">Logout</span>
-              </button>
+              <div className="flex items-center gap-4">
+                
+                {/* User Profile Section */}
+                <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+                  
+                  {/* Avatar */}
+                  <div className="h-10 w-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-100 flex items-center justify-center">
+                    <img 
+                      src={getAvatarUrl()} 
+                      alt="Profile" 
+                      className="h-full w-full object-cover"
+                      onError={(e) => {
+                        // If image fails to load, hide image tag and inject SVG icon
+                        e.target.style.display = 'none'; 
+                        e.target.parentElement.innerHTML = '<svg class="w-6 h-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                      }}
+                    />
+                  </div>
+
+                  {/* Name & Role */}
+                  <div className="text-left hidden md:block">
+                    <p className="text-sm font-bold text-gray-900 leading-none">
+                      {getDisplayName()}
+                    </p>
+                    <p className="text-xs text-gray-500 mt-1 capitalize">
+                      {userType || 'Member'}
+                    </p>
+                  </div>
+
+                </div>
+
+                {/* Logout Button */}
+                <button
+                  onClick={onLogout}
+                  className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition group"
+                >
+                  <LogOut className="w-5 h-5 group-hover:text-red-600" />
+                  <span className="font-medium">Logout</span>
+                </button>
+              </div>
             ) : (
-              /* Case 2: Agar Logged Out hai -> Show SIGN IN */
               <button
                 onClick={onLogin}
                 className="px-8 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition font-medium shadow-lg hover:shadow-xl"
