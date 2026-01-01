@@ -93,7 +93,7 @@ const App = () => {
     };
   }, []);
 
-  const fetchUserRole = async (user) => {
+  const fetchUserRole = async (currentUser) => {
     try {
       const response = await api.get('/profile/');
       const role = response.data.role;
@@ -104,12 +104,20 @@ const App = () => {
         setCurrentPage('patient-home');
       }
       setLoading(false);
+
     } catch (err) {
-      const role = user.user_metadata?.role;
-      if (role === 'doctor') {
-        setCurrentPage('doctor-home');
+      // Logic: User Auth'd but no Profile -> Redirect to Profile Setup
+      if (err.response && err.response.status === 404) {
+        console.log("ℹ️ User authenticated but no profile found. Redirecting to setup.");
+        setCurrentPage('patient-signup'); 
       } else {
-        setCurrentPage('patient-home');
+        console.error("Profile fetch error:", err);
+        const role = currentUser?.user_metadata?.role;
+        if (role === 'doctor') {
+          setCurrentPage('doctor-home');
+        } else {
+          setCurrentPage('patient-home');
+        }
       }
       setLoading(false);
     }
@@ -130,46 +138,45 @@ const App = () => {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'landing': return <LandingPage onNavigate={handleNavigate} />;
+      // Pass User & Logout to Landing Page
+      case 'landing': return <LandingPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      
       case 'login': return <LoginPage onNavigate={handleNavigate} />;
       case 'signup': return <SignupPage onNavigate={handleNavigate} />;
       case 'doctor-signup': return <DoctorSignup onNavigate={handleNavigate} />;
-      case 'patient-signup': return <PatientSignup onNavigate={handleNavigate} />;
+      case 'patient-signup': return <PatientSignup onNavigate={handleNavigate} user={user} />;
       
-      // Home Pages
       case 'patient-home': 
         return <PatientHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
       case 'doctor-home': 
         return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
       
-      // Test History
       case 'test-history': 
         return <TestHistoryPage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
 
-      // --- 🆕 UPDATED: Symptom & Test Flow Pages ---
       case 'symptom-test': 
         return <SymptomTestPage 
           onNavigate={handleNavigate} 
           symptomAnswers={symptomAnswers} 
           setSymptomAnswers={setSymptomAnswers} 
-          onLogout={handleLogout} // <--- Added
-          user={user}             // <--- Added
+          onLogout={handleLogout}
+          user={user}
         />;
       
       case 'xray-upload': 
         return <XRayUploadPage 
           onNavigate={handleNavigate} 
           symptomAnswers={symptomAnswers} 
-          onLogout={handleLogout} // <--- Added
-          user={user}             // <--- Added
+          onLogout={handleLogout}
+          user={user}
         />;
       
       case 'test-result': 
         return <TestResultPage 
           onNavigate={handleNavigate} 
           resultData={pageData} 
-          onLogout={handleLogout} // <--- Added
-          user={user}             // <--- Added
+          onLogout={handleLogout}
+          user={user}
         />;
 
       default: return <LandingPage onNavigate={handleNavigate} />;
@@ -187,9 +194,9 @@ const App = () => {
     );
   }
 
-  // Hide Global Navbar on pages that now have their own Internal Navbar
-  const showNavbar = !['login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'symptom-test', 'xray-upload', 'test-result'].includes(currentPage);
-  const isUserLoggedIn = currentPage !== 'landing';
+  // Updated exclusion list: Added 'landing' to prevent double navbar
+  const showNavbar = !['landing', 'login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'symptom-test', 'xray-upload', 'test-result'].includes(currentPage);
+  const isUserLoggedIn = !!user;
 
   return (
     <div className="app-container">
