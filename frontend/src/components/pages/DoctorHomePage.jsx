@@ -48,12 +48,13 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50 flex flex-col">
-      {/* ✅ FIXED NAVBAR TAG */}
       <Navbar 
         onLogout={onLogout} 
         userType="doctor" 
-        user={user}        // <--- Was missing
-        isLoggedIn={true}  // <--- Was missing
+        user={user}
+        isLoggedIn={true}
+        // ADDED: Pass onNavigate
+        onNavigate={onNavigate} 
       />
 
       <div className="flex-grow pt-32 pb-20 px-6 lg:px-8">
