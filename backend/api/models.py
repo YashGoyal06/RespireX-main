@@ -8,6 +8,12 @@ class UserProfile(models.Model):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     
     # Common fields
+    # --- NEW FIELDS ADDED HERE ---
+    full_name = models.CharField(max_length=200, blank=True)
+    phone = models.CharField(max_length=20, blank=True)
+    address = models.TextField(blank=True)
+    # -----------------------------
+    
     state = models.CharField(max_length=100, blank=True)
     city = models.CharField(max_length=100, blank=True)
     
