@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader } from 'lucide-react';
+import { Activity, Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail, Calendar, FileText } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 import api from '../../lib/api';
@@ -9,6 +9,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const [stats, setStats] = useState({ total: 0, positive: 0, negative: 0, underReview: 0 });
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedPatient, setSelectedPatient] = useState(null);
 
   const states = [
     'All States', 'Andhra Pradesh', 'Bihar', 'Gujarat', 'Karnataka', 
@@ -25,13 +26,20 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
         
         const mappedPatients = response.data.records.map(record => ({
           id: record.id,
-          name: record.patient_name || "Unknown", 
+          name: record.patient_name || record.full_name || "Unknown Patient", 
           age: record.age || "N/A",
-          state: record.state || "N/A",
-          city: record.city || "N/A",
-          lastTest: new Date(record.date_tested).toLocaleDateString(),
+          gender: record.gender || "N/A",
+          state: record.state || "",
+          city: record.city || "",
+          address: record.address || record.street_address || "", 
+          email: record.email || record.patient_email || "Not provided", 
+          phone: record.phone || record.phone_number || record.contact || "Not provided",
+          lastTest: new Date(record.date_tested).toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          }),
           result: record.result,
-          riskLevel: record.risk_level
+          riskLevel: record.risk_level,
+          confidence: record.confidence_score ? Math.round(record.confidence_score) : 0
         }));
         
         setPatients(mappedPatients);
@@ -45,6 +53,141 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     fetchData();
   }, [selectedState]);
 
+  // 🎨 REDESIGNED MODAL: Minimal & Professional
+  const PatientDetailsModal = ({ patient, onClose }) => {
+    if (!patient) return null;
+
+    const isPositive = patient.result === 'Positive';
+
+    return (
+      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in">
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale ring-1 ring-gray-100">
+          
+          {/* Header with Close Button */}
+          <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-white">
+            <div>
+              <h3 className="text-xl font-bold text-gray-900">Patient Profile</h3>
+              <p className="text-sm text-gray-500 mt-1">ID: #{patient.id}</p>
+            </div>
+            <button 
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 rounded-full transition"
+            >
+              <X className="w-6 h-6" />
+            </button>
+          </div>
+
+          <div className="p-8">
+            <div className="flex flex-col md:flex-row gap-8">
+              
+              {/* Left Col: Identity */}
+              <div className="flex-shrink-0 text-center md:text-left">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl flex items-center justify-center mx-auto md:mx-0 mb-4 shadow-inner">
+                  <span className="text-4xl font-bold text-blue-600">
+                    {patient.name.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <h2 className="text-2xl font-bold text-gray-900 mb-1">{patient.name}</h2>
+                <div className="inline-flex items-center gap-2 px-3 py-1 bg-gray-100 rounded-full text-sm font-medium text-gray-600">
+                  <span className="capitalize">{patient.gender}</span>
+                  <span>•</span>
+                  <span>{patient.age} yrs</span>
+                </div>
+              </div>
+
+              {/* Right Col: Details Grid */}
+              <div className="flex-grow grid grid-cols-1 gap-6">
+                
+                {/* Contact Section */}
+                <div className="space-y-4">
+                  <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contact Information</h4>
+                  
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                      <Phone className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Phone</p>
+                      <p className="font-medium text-gray-900">{patient.phone}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                      <Mail className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Email</p>
+                      <p className="font-medium text-gray-900 truncate max-w-[200px]">{patient.email}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4">
+                    <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
+                      <MapPin className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-500">Location</p>
+                      {/* Address Logic: Only show street address if it exists */}
+                      <p className="font-medium text-gray-900">
+                        {patient.address ? `${patient.address}, ` : ''}
+                        {patient.city}, {patient.state}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            {/* Medical Card Section */}
+            <div className="mt-8 pt-6 border-t border-gray-100">
+              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Latest Screening Result</h4>
+              
+              <div className={`rounded-2xl p-5 border ${
+                isPositive 
+                  ? 'bg-orange-50 border-orange-100' 
+                  : 'bg-green-50 border-green-100'
+              } flex items-center justify-between`}>
+                
+                <div className="flex items-center gap-4">
+                  <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
+                    isPositive ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
+                  }`}>
+                    {isPositive ? <Activity className="w-6 h-6" /> : <CheckCircle className="w-6 h-6" />}
+                  </div>
+                  <div>
+                    <p className={`font-bold text-lg ${
+                      isPositive ? 'text-orange-900' : 'text-green-900'
+                    }`}>
+                      {patient.result}
+                    </p>
+                    <p className={`text-sm ${
+                      isPositive ? 'text-orange-700' : 'text-green-700'
+                    }`}>
+                      Confidence Score: {patient.confidence}%
+                    </p>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-1 ${
+                    patient.riskLevel === 'High' ? 'bg-red-200 text-red-800' :
+                    patient.riskLevel === 'Medium' ? 'bg-yellow-200 text-yellow-800' :
+                    'bg-green-200 text-green-800'
+                  }`}>
+                    {patient.riskLevel} Risk
+                  </span>
+                  <p className="text-xs text-gray-500 mt-1">Tested: {patient.lastTest}</p>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50 flex flex-col">
@@ -53,9 +196,16 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
         userType="doctor" 
         user={user}
         isLoggedIn={true}
-        // ADDED: Pass onNavigate
         onNavigate={onNavigate} 
       />
+
+      {/* Render Modal */}
+      {selectedPatient && (
+        <PatientDetailsModal 
+          patient={selectedPatient} 
+          onClose={() => setSelectedPatient(null)} 
+        />
+      )}
 
       <div className="flex-grow pt-32 pb-20 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
@@ -155,10 +305,13 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                               patient.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
                               'bg-green-100 text-green-700'
                             }`}>
-                              {patient.riskLevel} Risk
+                              {patient.riskLevel}
                             </span>
                           </div>
-                          <button className="px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold shadow-lg hover:shadow-xl btn-primary">
+                          <button 
+                            onClick={() => setSelectedPatient(patient)}
+                            className="px-6 py-3 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold shadow-lg hover:shadow-xl btn-primary"
+                          >
                             View Details
                           </button>
                         </div>
