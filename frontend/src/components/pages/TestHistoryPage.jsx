@@ -5,7 +5,8 @@ import Footer from '../common/Footer';
 import api from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 
-const TestHistoryPage = ({ onNavigate }) => {
+// 1. Accept user and onLogout props
+const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,7 +20,6 @@ const TestHistoryPage = ({ onNavigate }) => {
       setLoading(true);
       setError(null);
       
-      // Check if user is authenticated
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         setError("Please log in to view your history");
@@ -27,14 +27,8 @@ const TestHistoryPage = ({ onNavigate }) => {
         return;
       }
 
-      console.log("Fetching test history...");
-      
-      // Fetch from backend - adjust endpoint to match your Django URLs
       const response = await api.get('/history/');
       
-      console.log("History response:", response.data);
-      
-      // Transform data
       const formattedData = response.data.map(test => ({
         id: test.id,
         date: new Date(test.date_tested).toLocaleDateString('en-US', { 
@@ -55,12 +49,9 @@ const TestHistoryPage = ({ onNavigate }) => {
       }));
 
       setTests(formattedData);
-      console.log("Formatted tests:", formattedData);
       
     } catch (err) {
       console.error("Failed to fetch history:", err);
-      
-      // More specific error messages
       if (err.response?.status === 401) {
         setError("Session expired. Please log in again.");
       } else if (err.response?.status === 404) {
@@ -104,6 +95,11 @@ Note: This is a preliminary screening result. Please consult a healthcare profes
         <Navbar 
           showBackButton={true}
           onBack={() => onNavigate('patient-home')}
+          // Pass Auth Props Here too
+          isLoggedIn={true}
+          user={user}
+          onLogout={onLogout}
+          userType="patient"
         />
         <div className="flex-grow flex items-center justify-center">
           <div className="text-center">
@@ -122,6 +118,11 @@ Note: This is a preliminary screening result. Please consult a healthcare profes
         <Navbar 
           showBackButton={true}
           onBack={() => onNavigate('patient-home')}
+          // Pass Auth Props Here too
+          isLoggedIn={true}
+          user={user}
+          onLogout={onLogout}
+          userType="patient"
         />
         <div className="flex-grow flex items-center justify-center px-4">
           <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
@@ -150,9 +151,14 @@ Note: This is a preliminary screening result. Please consult a healthcare profes
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
+      {/* 2. Update Main Navbar */}
       <Navbar 
         showBackButton={true}
         onBack={() => onNavigate('patient-home')}
+        isLoggedIn={true}    // <--- Forces logged in view
+        user={user}          // <--- Passes user data for avatar/name
+        onLogout={onLogout}  // <--- Enables logout
+        userType="patient"   // <--- Shows "Patient" badge
       />
 
       <div className="flex-grow pt-32 pb-20 px-6">
