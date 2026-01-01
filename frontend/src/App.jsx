@@ -21,32 +21,26 @@ const App = () => {
   const [loading, setLoading] = useState(true);
   const [pageData, setPageData] = useState(null);
   const [symptomAnswers, setSymptomAnswers] = useState({});
-  const [isCheckingAuth, setIsCheckingAuth] = useState(false); // Prevent multiple checks
+  const [isCheckingAuth, setIsCheckingAuth] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     let mounted = true;
     
     const safetyTimer = setTimeout(() => {
       if (mounted && loading) {
-        console.log("⏱️ Safety timer triggered");
         setLoading(false);
       }
     }, 5000);
 
     const initApp = async () => {
-      if (isCheckingAuth) {
-        console.log("🔄 Auth check already in progress, skipping...");
-        return;
-      }
+      if (isCheckingAuth) return;
 
       try {
         setIsCheckingAuth(true);
-        console.log("🔍 Checking user session...");
-        
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
-          console.error("❌ Session error:", error);
           if (mounted) {
             setCurrentPage('landing');
             setLoading(false);
@@ -55,41 +49,40 @@ const App = () => {
         }
         
         if (session?.user && mounted) {
-          console.log("✅ User session found:", session.user.email);
+          setUser(session.user);
           await fetchUserRole(session.user);
         } else if (mounted) {
-          console.log("ℹ️ No session found, showing landing page");
           setCurrentPage('landing');
           setLoading(false);
         }
       } catch (error) {
-        console.error("❌ Init error:", error);
         if (mounted) {
           setCurrentPage('landing');
           setLoading(false);
         }
       } finally {
-        if (mounted) {
-          setIsCheckingAuth(false);
-        }
+        if (mounted) setIsCheckingAuth(false);
       }
     };
 
     initApp();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("🔔 Auth state changed:", event);
-      
-      if (event === 'SIGNED_IN' && session && !isCheckingAuth) {
-        console.log("✅ User signed in:", session.user.email);
-        setIsCheckingAuth(true);
-        await fetchUserRole(session.user);
-        setIsCheckingAuth(false);
+      if (event === 'SIGNED_IN' && session) {
+        if (mounted) {
+          setUser(session.user);
+          if (!isCheckingAuth) {
+            setIsCheckingAuth(true);
+            await fetchUserRole(session.user);
+            setIsCheckingAuth(false);
+          }
+        }
       } else if (event === 'SIGNED_OUT') {
-        console.log("🚪 User signed out");
-        setCurrentPage('landing');
-        setLoading(false);
-        setIsCheckingAuth(false);
+        if (mounted) {
+          setUser(null);
+          setCurrentPage('landing');
+          setLoading(false);
+        }
       }
     });
 
@@ -98,105 +91,88 @@ const App = () => {
       clearTimeout(safetyTimer);
       subscription.unsubscribe();
     };
-  }, []); // Only run once on mount
+  }, []);
 
   const fetchUserRole = async (user) => {
     try {
-      console.log("🔎 Fetching user role from backend...");
-      
-      // Try to get profile from backend
       const response = await api.get('/profile/');
       const role = response.data.role;
       
-      console.log("✅ User role from backend:", role);
-      
-      // Navigate based on role
       if (role === 'doctor') {
-        console.log("➡️ Navigating to doctor home");
         setCurrentPage('doctor-home');
       } else {
-        console.log("➡️ Navigating to patient home");
         setCurrentPage('patient-home');
       }
-      
       setLoading(false);
-      
     } catch (err) {
-      console.warn("⚠️ Backend fetch failed:", err.message);
-      
-      // Fallback to metadata if backend fails
       const role = user.user_metadata?.role;
-      console.log("🔄 Using metadata role:", role);
-      
       if (role === 'doctor') {
-        console.log("➡️ Navigating to doctor home (fallback)");
         setCurrentPage('doctor-home');
       } else {
-        console.log("➡️ Navigating to patient home (fallback)");
         setCurrentPage('patient-home');
       }
-      
       setLoading(false);
     }
   };
 
   const handleLogout = async () => {
     try {
-      console.log("🚪 Logging out...");
       await supabase.auth.signOut();
-      setCurrentPage('landing');
-      setPageData(null);
-      setSymptomAnswers({});
-      console.log("✅ Logout successful");
     } catch (error) {
       console.error("❌ Logout error:", error);
     }
   };
 
   const handleNavigate = (page, data = null) => {
-    console.log("🧭 Navigating to:", page);
     setCurrentPage(page);
-    if (data) {
-      setPageData(data);
-    }
+    if (data) setPageData(data);
   };
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'landing': 
-        return <LandingPage onNavigate={handleNavigate} />;
-      case 'login': 
-        return <LoginPage onNavigate={handleNavigate} />;
-      case 'signup': 
-        return <SignupPage onNavigate={handleNavigate} />;
-      case 'doctor-signup': 
-        return <DoctorSignup onNavigate={handleNavigate} />;
-      case 'patient-signup': 
-        return <PatientSignup onNavigate={handleNavigate} />;
+      case 'landing': return <LandingPage onNavigate={handleNavigate} />;
+      case 'login': return <LoginPage onNavigate={handleNavigate} />;
+      case 'signup': return <SignupPage onNavigate={handleNavigate} />;
+      case 'doctor-signup': return <DoctorSignup onNavigate={handleNavigate} />;
+      case 'patient-signup': return <PatientSignup onNavigate={handleNavigate} />;
+      
+      // Home Pages
       case 'patient-home': 
-        return <PatientHomePage onNavigate={handleNavigate} onLogout={handleLogout} />;
+        return <PatientHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
       case 'doctor-home': 
-        return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} />;
+        return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
+      
+      // Test History
+      case 'test-history': 
+        return <TestHistoryPage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
+
+      // --- 🆕 UPDATED: Symptom & Test Flow Pages ---
       case 'symptom-test': 
         return <SymptomTestPage 
           onNavigate={handleNavigate} 
-          symptomAnswers={symptomAnswers}
-          setSymptomAnswers={setSymptomAnswers}
+          symptomAnswers={symptomAnswers} 
+          setSymptomAnswers={setSymptomAnswers} 
+          onLogout={handleLogout} // <--- Added
+          user={user}             // <--- Added
         />;
-      case 'test-history': 
-        return <TestHistoryPage onNavigate={handleNavigate} />;
+      
+      case 'xray-upload': 
+        return <XRayUploadPage 
+          onNavigate={handleNavigate} 
+          symptomAnswers={symptomAnswers} 
+          onLogout={handleLogout} // <--- Added
+          user={user}             // <--- Added
+        />;
+      
       case 'test-result': 
         return <TestResultPage 
           onNavigate={handleNavigate} 
-          resultData={pageData}
+          resultData={pageData} 
+          onLogout={handleLogout} // <--- Added
+          user={user}             // <--- Added
         />;
-      case 'xray-upload': 
-        return <XRayUploadPage 
-          onNavigate={handleNavigate}
-          symptomAnswers={symptomAnswers}
-        />;
-      default: 
-        return <LandingPage onNavigate={handleNavigate} />;
+
+      default: return <LandingPage onNavigate={handleNavigate} />;
     }
   };
 
@@ -211,7 +187,8 @@ const App = () => {
     );
   }
 
-  const showNavbar = !['login', 'signup', 'doctor-signup', 'patient-signup'].includes(currentPage);
+  // Hide Global Navbar on pages that now have their own Internal Navbar
+  const showNavbar = !['login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'symptom-test', 'xray-upload', 'test-result'].includes(currentPage);
   const isUserLoggedIn = currentPage !== 'landing';
 
   return (
@@ -219,18 +196,11 @@ const App = () => {
       {showNavbar && (
         <Navbar 
           isLoggedIn={isUserLoggedIn}
+          user={user}
           onLogin={() => handleNavigate('login')}
           onLogout={handleLogout}
-          userType={currentPage.includes('doctor') ? 'doctor' : currentPage.includes('patient') ? 'patient' : null}
+          userType={null}
           onNavigate={handleNavigate}
-          showBackButton={isUserLoggedIn && !['patient-home', 'doctor-home'].includes(currentPage)}
-          onBack={() => {
-            if (currentPage.includes('doctor')) {
-              handleNavigate('doctor-home');
-            } else {
-              handleNavigate('patient-home');
-            }
-          }}
         />
       )}
       {renderPage()}
