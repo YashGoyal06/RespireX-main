@@ -3,15 +3,17 @@ import { FileText, Clock, Shield, Zap, ChevronRight, Activity } from 'lucide-rea
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
-const PatientHomePage = ({ onNavigate, onLogout, user }) => { // <--- Added user prop
+const PatientHomePage = ({ onNavigate, onLogout, user }) => { 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
       {/* Navigation */}
       <Navbar 
         onLogout={onLogout} 
         userType="patient" 
-        isLoggedIn={true}  // <--- Forces "Logged In" state
-        user={user}        // <--- Passes user data for profile pic
+        isLoggedIn={true}
+        user={user}
+        // ADDED: Pass onNavigate so the Logo click works
+        onNavigate={onNavigate} 
       />
 
       {/* Main Content */}
@@ -23,8 +25,6 @@ const PatientHomePage = ({ onNavigate, onLogout, user }) => { // <--- Added user
             <p className="text-xl text-gray-600">Ready to start your TB screening test?</p>
           </div>
 
-          {/* ... [Rest of your UI remains exactly the same] ... */}
-          
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
             <div className="group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-1">
               <div className="flex items-center space-x-4 mb-6">
