@@ -12,12 +12,10 @@ const Navbar = ({
   showBackButton, 
   showCancelButton 
 }) => {
-
-  // ✅ CORRECT PATHS: Use absolute paths ('/') for files in the 'public' folder
   const DOCTOR_DEFAULT_IMG = "/doctorpfp.jpg"; 
   const PATIENT_MALE_IMG = "/male.jpg";
   const PATIENT_FEMALE_IMG = "/female.jpg";
-  const PATIENT_DEFAULT_IMG = "/male.jpg"; // Fallback image
+  const PATIENT_DEFAULT_IMG = "/male.jpg";
 
   // Helper: Get Display Name
   const getDisplayName = () => {
