@@ -3,11 +3,16 @@ import { FileText, Clock, Shield, Zap, ChevronRight, Activity } from 'lucide-rea
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
-const PatientHomePage = ({ onNavigate, onLogout }) => {
+const PatientHomePage = ({ onNavigate, onLogout, user }) => { // <--- Added user prop
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
       {/* Navigation */}
-      <Navbar onLogout={onLogout} userType="patient" />
+      <Navbar 
+        onLogout={onLogout} 
+        userType="patient" 
+        isLoggedIn={true}  // <--- Forces "Logged In" state
+        user={user}        // <--- Passes user data for profile pic
+      />
 
       {/* Main Content */}
       <div className="flex-grow pt-32 pb-20 px-6 lg:px-8">
@@ -18,9 +23,9 @@ const PatientHomePage = ({ onNavigate, onLogout }) => {
             <p className="text-xl text-gray-600">Ready to start your TB screening test?</p>
           </div>
 
-          {/* Main Action Cards */}
+          {/* ... [Rest of your UI remains exactly the same] ... */}
+          
           <div className="grid lg:grid-cols-2 gap-8 mb-12">
-            {/* Start Test Card */}
             <div className="group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-1">
               <div className="flex items-center space-x-4 mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -40,7 +45,6 @@ const PatientHomePage = ({ onNavigate, onLogout }) => {
               </button>
             </div>
 
-            {/* Test History Card */}
             <div className="group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-2">
               <div className="flex items-center space-x-4 mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -61,7 +65,6 @@ const PatientHomePage = ({ onNavigate, onLogout }) => {
             </div>
           </div>
 
-          {/* Information Cards */}
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
@@ -96,7 +99,6 @@ const PatientHomePage = ({ onNavigate, onLogout }) => {
             ))}
           </div>
 
-          {/* Health Tips Section */}
           <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-10 text-white animate-fade-in stagger-4">
             <h3 className="text-3xl font-bold mb-4">Health Tips</h3>
             <ul className="space-y-3 text-lg">
@@ -117,7 +119,6 @@ const PatientHomePage = ({ onNavigate, onLogout }) => {
         </div>
       </div>
 
-      {/* Footer */}
       <Footer />
     </div>
   );
