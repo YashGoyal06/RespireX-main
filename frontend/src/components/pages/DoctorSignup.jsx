@@ -1,12 +1,73 @@
 import React, { useState } from 'react';
-import { Stethoscope, Shield, Key } from 'lucide-react';
+import { Stethoscope, Shield, Key, Loader, AlertCircle } from 'lucide-react';
 import Navbar from '../common/Navbar';
+import { supabase } from '../../lib/supabase'; // Import Supabase
+import api from '../../lib/api'; // Import API to verify profile
 
 const DoctorSignup = ({ onNavigate, onBack }) => {
   const [credentials, setCredentials] = useState({
     accessCode: '',
     licenseNumber: ''
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+
+  // 🔐 DEMO CONFIGURATION
+  // In a real app, each doctor would create their own account.
+  // For this demo, we auto-login a shared "Master Doctor" account.
+  const DEMO_ACCESS_CODE = "DOC2024"; 
+  const DEMO_DOCTOR_EMAIL = "doctor@admin.com"; // Must match Supabase User
+  const DEMO_DOCTOR_PASS = "doctor123";         // Must match Supabase User
+
+  const handleVerification = async () => {
+    setLoading(true);
+    setError('');
+
+    try {
+      // 1. Check Access Code (Client-side check for demo)
+      if (credentials.accessCode !== DEMO_ACCESS_CODE) {
+        throw new Error("Invalid Access Code. Please contact administrator.");
+      }
+
+      if (!credentials.licenseNumber) {
+        throw new Error("Please enter your medical license number.");
+      }
+
+      console.log("🔐 Verifying credentials...");
+
+      // 2. Perform "Shadow Login" to get the Auth Token
+      const { data, error: authError } = await supabase.auth.signInWithPassword({
+        email: DEMO_DOCTOR_EMAIL,
+        password: DEMO_DOCTOR_PASS,
+      });
+
+      if (authError) throw authError;
+
+      // 3. Verify/Update the Backend Profile
+      // We send the license number entered by the user to update the profile
+      try {
+        await api.post('/profile/', {
+          role: 'doctor',
+          licenseNumber: credentials.licenseNumber,
+          // You can add dummy data here if needed for the demo profile
+          state: 'Maharashtra', 
+          city: 'Mumbai'
+        });
+      } catch (profileError) {
+        console.warn("Profile update warning:", profileError);
+        // Continue anyway if login succeeded
+      }
+
+      console.log("✅ Doctor verification successful");
+      onNavigate('doctor-home');
+
+    } catch (err) {
+      console.error("Verification failed:", err);
+      setError(err.message || "Verification failed. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50">
@@ -34,6 +95,15 @@ const DoctorSignup = ({ onNavigate, onBack }) => {
           </div>
 
           <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-10 animate-scale">
+            
+            {/* Error Message */}
+            {error && (
+              <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-3 text-red-700 animate-fade-in">
+                <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                <span className="font-medium">{error}</span>
+              </div>
+            )}
+
             {/* Warning Badge */}
             <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl p-6 mb-8">
               <div className="flex items-start space-x-3">
@@ -77,15 +147,23 @@ const DoctorSignup = ({ onNavigate, onBack }) => {
               </div>
 
               <button
-                onClick={() => onNavigate('doctor-home')}
-                className="w-full py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white rounded-xl hover:from-cyan-700 hover:to-cyan-800 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary"
+                onClick={handleVerification}
+                disabled={loading}
+                className="w-full py-4 bg-gradient-to-r from-cyan-600 to-cyan-700 text-white rounded-xl hover:from-cyan-700 hover:to-cyan-800 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary flex items-center justify-center space-x-2 disabled:opacity-70 disabled:cursor-not-allowed"
               >
-                Verify & Continue
+                {loading ? (
+                  <>
+                    <Loader className="w-6 h-6 animate-spin" />
+                    <span>Verifying...</span>
+                  </>
+                ) : (
+                  <span>Verify & Continue</span>
+                )}
               </button>
 
               <div className="text-center pt-4">
                 <p className="text-sm text-gray-500">
-                  Need help? Contact administrator for access
+                  Demo Access Code: <strong>DOC2024</strong>
                 </p>
               </div>
             </div>
