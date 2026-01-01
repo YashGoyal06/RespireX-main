@@ -20,6 +20,13 @@ class UserProfileView(views.APIView):
         profile.age = data.get('age')
         profile.gender = data.get('gender', '')
         profile.license_number = data.get('licenseNumber', None)
+        
+        # --- SAVE NEW FIELDS ---
+        profile.full_name = data.get('full_name', '')
+        profile.phone = data.get('phone', '')
+        profile.address = data.get('address', '')
+        # -----------------------
+        
         profile.save()
         return response.Response(UserProfileSerializer(profile).data)
 
