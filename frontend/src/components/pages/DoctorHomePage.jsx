@@ -4,7 +4,7 @@ import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 import api from '../../lib/api';
 
-const DoctorHomePage = ({ onNavigate, onLogout }) => {
+const DoctorHomePage = ({ onNavigate, onLogout, user }) => { 
   const [selectedState, setSelectedState] = useState('all');
   const [stats, setStats] = useState({ total: 0, positive: 0, negative: 0, underReview: 0 });
   const [patients, setPatients] = useState([]);
@@ -16,19 +16,16 @@ const DoctorHomePage = ({ onNavigate, onLogout }) => {
     'Tamil Nadu', 'Uttar Pradesh', 'West Bengal'
   ];
 
-  // Fetch Data from Backend
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // This endpoint returns { stats: {...}, records: [...] }
         const response = await api.get(`/doctor/dashboard/?state=${selectedState === 'All States' ? 'all' : selectedState}`);
         setStats(response.data.stats);
         
-        // Map backend data to frontend structure
         const mappedPatients = response.data.records.map(record => ({
           id: record.id,
-          name: record.patient_name || "Unknown", // Backend sends email as patient_name usually
+          name: record.patient_name || "Unknown", 
           age: record.age || "N/A",
           state: record.state || "N/A",
           city: record.city || "N/A",
@@ -51,7 +48,13 @@ const DoctorHomePage = ({ onNavigate, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50 flex flex-col">
-      <Navbar onLogout={onLogout} userType="doctor" />
+      {/* ✅ FIXED NAVBAR TAG */}
+      <Navbar 
+        onLogout={onLogout} 
+        userType="doctor" 
+        user={user}        // <--- Was missing
+        isLoggedIn={true}  // <--- Was missing
+      />
 
       <div className="flex-grow pt-32 pb-20 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
