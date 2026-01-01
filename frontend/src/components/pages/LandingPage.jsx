@@ -1,17 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Zap, TrendingUp, Shield, ChevronRight } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
+import api from '../../lib/api'; 
 
 const LandingPage = ({ onNavigate, user, onLogout }) => {
+  // 🆕 Initialize as null to distinguish between "loading" and "0"
+  const [totalTests, setTotalTests] = useState(null);
+
+  useEffect(() => {
+    // 🆕 Fetch stats independently of User Auth
+    const fetchStats = async () => {
+      try {
+        console.log("📊 Fetching public stats...");
+        // Ensure your backend allows this endpoint to be public!
+        const response = await api.get('/stats/'); 
+        const count = response.data.total_tests || 0;
+        console.log("✅ Stats received:", count);
+        setTotalTests(count);
+      } catch (error) {
+        console.warn("⚠️ Could not fetch stats (using default 0):", error.message);
+        setTotalTests(0); 
+      }
+    };
+
+    fetchStats();
+  }, []);
   
-  // Helper: Logic to handle where "Get Started" takes you
   const handleGetStarted = () => {
     if (user) {
-      // If logged in, go straight to Patient Home
       onNavigate('patient-home');
     } else {
-      // If not logged in, go to Sign Up / Role Selection
       onNavigate('signup');
     }
   };
@@ -19,7 +38,6 @@ const LandingPage = ({ onNavigate, user, onLogout }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       
-      {/* Navigation */}
       <Navbar 
         onLogin={() => onNavigate('login')}
         onNavigate={onNavigate} 
@@ -132,22 +150,37 @@ const LandingPage = ({ onNavigate, user, onLogout }) => {
         </div>
       </div>
 
-      {/* Stats Section */}
+      {/* Stats Section - Updated */}
       <div className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8 text-center">
-            {[
-              { number: "10,000+", label: "Tests Completed" },
-              { number: "98%", label: "Accuracy Rate" },
-              { number: "24/7", label: "Available Support" }
-            ].map((stat, idx) => (
-              <div key={idx} className={`animate-fade-in stagger-${idx + 1}`}>
-                <div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
-                  {stat.number}
-                </div>
-                <div className="text-gray-600 font-medium">{stat.label}</div>
+            
+            {/* 1. Tests Completed (Real Data) */}
+            <div className="animate-fade-in stagger-1">
+              {/* Display Logic: If > 0, show number. If 0 or null, show message. */}
+              <div className={`font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2 ${
+                totalTests > 0 ? 'text-5xl' : 'text-3xl lg:text-4xl'
+              }`}>
+                {totalTests > 0 ? `${totalTests}+` : "Start Screening"}
               </div>
-            ))}
+              <div className="text-gray-600 font-medium">Tests Completed</div>
+            </div>
+
+            {/* 2. Static Stats */}
+            <div className="animate-fade-in stagger-2">
+              <div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+                98%
+              </div>
+              <div className="text-gray-600 font-medium">Accuracy Rate</div>
+            </div>
+
+            <div className="animate-fade-in stagger-3">
+              <div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
+                24/7
+              </div>
+              <div className="text-gray-600 font-medium">Available Support</div>
+            </div>
+
           </div>
         </div>
       </div>
