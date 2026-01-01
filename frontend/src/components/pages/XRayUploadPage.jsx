@@ -3,7 +3,8 @@ import { Upload, Image, Check, Loader, AlertTriangle } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import api from '../../lib/api';
 
-const XRayUploadPage = ({ onNavigate, symptomAnswers = {} }) => {
+// 1. Accept user and onLogout
+const XRayUploadPage = ({ onNavigate, symptomAnswers = {}, onLogout, user }) => {
   const [file, setFile] = useState(null);
   const [preview, setPreview] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -70,14 +71,10 @@ const XRayUploadPage = ({ onNavigate, symptomAnswers = {} }) => {
     formData.append('symptoms', JSON.stringify(symptomAnswers || {}));
 
     try {
-      console.log("Uploading X-ray for analysis...");
       const response = await api.post('/predict/', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       
-      console.log("Analysis response:", response.data);
-      
-      // Navigate to results page with data
       onNavigate('test-result', { 
         result: response.data,
         originalImage: preview,
@@ -95,9 +92,14 @@ const XRayUploadPage = ({ onNavigate, symptomAnswers = {} }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* 2. Update Navbar */}
       <Navbar 
         showCancelButton={true}
         onCancel={() => onNavigate('patient-home')}
+        isLoggedIn={true}    // <--- Forces logged in view
+        user={user}          // <--- Profile Picture
+        onLogout={onLogout}  // <--- Logout Button
+        userType="patient"   // <--- Badge
       />
 
       <div className="pt-32 pb-20 px-6">
