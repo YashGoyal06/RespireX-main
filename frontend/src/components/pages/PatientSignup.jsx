@@ -1,13 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User, Mail, Phone, Calendar, MapPin, Home, Loader, AlertCircle } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import { supabase } from '../../lib/supabase';
 import api from '../../lib/api';
 
-const PatientSignup = ({ onNavigate, onBack }) => {
+// Accept 'user' prop to detect if we are in "Complete Profile" mode
+const PatientSignup = ({ onNavigate, onBack, user }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-   
+  
+  // Determine mode based on presence of user object
+  const isProfileCompletion = !!user;
+
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -21,6 +25,18 @@ const PatientSignup = ({ onNavigate, onBack }) => {
     address: ''
   });
 
+  // Pre-fill email and name if user exists (e.g. from Google Login)
+  useEffect(() => {
+    if (user) {
+      setFormData(prev => ({
+        ...prev,
+        email: user.email || '',
+        fullName: user.user_metadata?.full_name || prev.fullName,
+        // Google sometimes provides picture, but we just need email/name here
+      }));
+    }
+  }, [user]);
+
   const states = [
     'Andhra Pradesh', 'Arunachal Pradesh', 'Assam', 'Bihar', 'Chhattisgarh',
     'Goa', 'Gujarat', 'Haryana', 'Himachal Pradesh', 'Jharkhand',
@@ -30,7 +46,6 @@ const PatientSignup = ({ onNavigate, onBack }) => {
     'Uttar Pradesh', 'Uttarakhand', 'West Bengal'
   ];
 
-  // Helper to convert DOB to Age for the backend
   const calculateAge = (dob) => {
     if (!dob) return null;
     const diff = Date.now() - new Date(dob).getTime();
@@ -42,40 +57,44 @@ const PatientSignup = ({ onNavigate, onBack }) => {
     setLoading(true);
     setError('');
 
-    // 1. Basic Validation
-    if (formData.password !== formData.confirmPassword) {
+    // Validation
+    if (!isProfileCompletion && formData.password !== formData.confirmPassword) {
       setError("Passwords do not match");
       setLoading(false);
       return;
     }
-    if (!formData.email || !formData.password || !formData.dateOfBirth) {
+    
+    // For completion, we only need profile fields. For signup, we need password too.
+    if (!formData.fullName || !formData.dateOfBirth || (!isProfileCompletion && !formData.password)) {
       setError("Please fill in all required fields");
       setLoading(false);
       return;
     }
 
     try {
-      // 2. Create Auth User in Supabase
-      // Added options to store Full Name in Supabase metadata immediately
-      const { data, error: authError } = await supabase.auth.signUp({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          data: {
-            full_name: formData.fullName,
-            phone: formData.phone,
-            gender: formData.gender, // Storing phone in metadata as backup
+      // Step 1: Authentication (Only if not already logged in)
+      let sessionUser = user;
+
+      if (!isProfileCompletion) {
+        const { data, error: authError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.fullName,
+              phone: formData.phone,
+              gender: formData.gender,
+            }
           }
-        }
-      });
+        });
 
-      if (authError) throw authError;
+        if (authError) throw authError;
+        sessionUser = data.user;
+      }
 
-      // 3. Create Profile in Django Backend
-      // Logic Update: Removed setTimeout. We check if a session was established.
-      // If email confirmation is required, data.session might be null.
-      
-      if (data?.session) {
+      // Step 2: Create/Update Backend Profile
+      // If we are here, we either just signed up OR we are already logged in (Google)
+      if (sessionUser) {
         try {
           await api.post('/profile/', {
             role: 'patient',
@@ -83,7 +102,6 @@ const PatientSignup = ({ onNavigate, onBack }) => {
             gender: formData.gender,
             state: formData.state,
             city: formData.city,
-            // Added these fields so they are sent to backend
             phone: formData.phone, 
             address: formData.address,
             full_name: formData.fullName
@@ -93,15 +111,15 @@ const PatientSignup = ({ onNavigate, onBack }) => {
           onNavigate('patient-home');
         } catch (profileError) {
           console.error("Profile creation failed:", profileError);
-          // Even if profile update fails, the user is created, so we let them in
+          // If profile fails but auth worked, we still usually let them in, 
+          // OR you could show an error saying "Could not save profile data".
+          // For now, we proceed to home.
           setLoading(false);
           onNavigate('patient-home'); 
         }
       } else {
-        // Handle case where Email Verification is required before login
-        // Or simply navigate if you want them to check email
+        // Email verification required case
         setLoading(false);
-        // Optional: setError("Please check your email to verify your account.");
         onNavigate('patient-home'); 
       }
 
@@ -115,31 +133,27 @@ const PatientSignup = ({ onNavigate, onBack }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <Navbar 
-        showBackButton={true}
+        showBackButton={!isProfileCompletion} // Hide back button if we are forcing profile completion
         onBack={onBack}
+        isLoggedIn={isProfileCompletion} // Show user avatar if they are logged in
+        user={user}
       />
 
       <div className="pt-32 pb-12 px-4">
         <div className="max-w-3xl mx-auto">
           <div className="text-center mb-10 animate-fade-in stagger-1">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl overflow-hidden">
-              <img 
-                src="/respirex-logo.png" 
-                alt="RespireX Logo" 
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.parentElement.style.background = 'linear-gradient(to bottom right, #2563eb, #1e40af)';
-                }}
-              />
-            </div>
-            <h2 className="text-4xl font-bold text-gray-900 mb-3">Patient Registration</h2>
-            <p className="text-gray-600 text-lg">Fill in your details to create an account</p>
+            <h2 className="text-4xl font-bold text-gray-900 mb-3">
+              {isProfileCompletion ? "Complete Your Profile" : "Patient Registration"}
+            </h2>
+            <p className="text-gray-600 text-lg">
+              {isProfileCompletion 
+                ? "Please provide your details to continue to the dashboard" 
+                : "Fill in your details to create an account"}
+            </p>
           </div>
 
           <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-8 lg:p-12 animate-scale">
              
-            {/* Error Message Display */}
             {error && (
               <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl flex items-center space-x-3 text-red-700 animate-fade-in">
                 <AlertCircle className="w-5 h-5 flex-shrink-0" />
@@ -173,8 +187,9 @@ const PatientSignup = ({ onNavigate, onBack }) => {
                     <input
                       type="email"
                       value={formData.email}
+                      disabled={isProfileCompletion} // Disable email edit if completing profile
                       onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900"
+                      className={`w-full pl-12 pr-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900 ${isProfileCompletion ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                       placeholder="your@email.com"
                     />
                   </div>
@@ -271,30 +286,32 @@ const PatientSignup = ({ onNavigate, onBack }) => {
                 </div>
               </div>
 
-              {/* Password Fields */}
-              <div className="grid md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Password</label>
-                  <input
-                    type="password"
-                    value={formData.password}
-                    onChange={(e) => setFormData({...formData, password: e.target.value})}
-                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900"
-                    placeholder="Create password"
-                  />
-                </div>
+              {/* Password Fields - ONLY SHOW IF NOT COMPLETING PROFILE */}
+              {!isProfileCompletion && (
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Password</label>
+                    <input
+                      type="password"
+                      value={formData.password}
+                      onChange={(e) => setFormData({...formData, password: e.target.value})}
+                      className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900"
+                      placeholder="Create password"
+                    />
+                  </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-3">Confirm Password</label>
-                  <input
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
-                    className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900"
-                    placeholder="Confirm password"
-                  />
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-3">Confirm Password</label>
+                    <input
+                      type="password"
+                      value={formData.confirmPassword}
+                      onChange={(e) => setFormData({...formData, confirmPassword: e.target.value})}
+                      className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition text-gray-900"
+                      placeholder="Confirm password"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <button
                 onClick={handleSignup}
@@ -304,10 +321,10 @@ const PatientSignup = ({ onNavigate, onBack }) => {
                 {loading ? (
                   <>
                     <Loader className="w-6 h-6 animate-spin" />
-                    <span>Creating Account...</span>
+                    <span>{isProfileCompletion ? "Saving Profile..." : "Creating Account..."}</span>
                   </>
                 ) : (
-                  <span>Create Account</span>
+                  <span>{isProfileCompletion ? "Save & Continue" : "Create Account"}</span>
                 )}
               </button>
             </div>
