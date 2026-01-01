@@ -12,23 +12,12 @@ const SignupPage = ({ onNavigate }) => {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
         <Navbar 
           showBackButton={true}
-          onBack={() => onNavigate('login')}
+          onBack={() => onNavigate('landing')}
         />
 
         <div className="flex items-center justify-center min-h-screen px-4 pt-20 pb-12">
           <div className="max-w-5xl w-full">
             <div className="text-center mb-12 animate-fade-in">
-              <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl overflow-hidden">
-                <img 
-                  src="/respirex-logo.png" 
-                  alt="RespireX Logo" 
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    e.target.style.display = 'none';
-                    e.target.parentElement.style.background = 'linear-gradient(to bottom right, #2563eb, #1e40af)';
-                  }}
-                />
-              </div>
               <h2 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">Create Account</h2>
               <p className="text-xl text-gray-600">Choose your account type to get started</p>
             </div>
