@@ -4,7 +4,7 @@ import { supabase } from './supabase';
 // SHORTCUT FIX: Use environment variable for URL, fallback to localhost
 const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
-  timeout: 30000, // Increased timeout for AI predictions (30s)
+  timeout: 120000, // Change 30000 to 120000 (2 mins) for Render cold starts
 });
 
 // Track ongoing requests to prevent duplicates
