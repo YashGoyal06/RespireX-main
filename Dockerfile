@@ -1,7 +1,7 @@
 # Place this file in the ROOT of your project (next to frontend/ and backend/ folders)
 
 # 1. Use Python 3.9
-FROM python:3.9-slim
+FROM python:3.10-slim
 
 # 2. Set environment variables
 ENV PYTHONDONTWRITEBYTECODE 1
