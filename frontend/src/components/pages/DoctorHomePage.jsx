@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail, Calendar, FileText } from 'lucide-react';
+import { Activity, Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 import api from '../../lib/api';
@@ -10,7 +10,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
-  const [doctorName, setDoctorName] = useState(''); // <--- NEW STATE
+  const [doctorName, setDoctorName] = useState('');
 
   const states = [
     'All States', 'Andhra Pradesh', 'Bihar', 'Gujarat', 'Karnataka', 
@@ -70,7 +70,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     fetchData();
   }, [selectedState]);
 
-  // ... [PatientDetailsModal Code remains exactly the same] ...
+  // Modal Component
   const PatientDetailsModal = ({ patient, onClose }) => {
     if (!patient) return null;
 
@@ -80,7 +80,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in">
         <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale ring-1 ring-gray-100">
           
-          {/* Header with Close Button */}
           <div className="px-8 py-6 border-b border-gray-100 flex items-center justify-between bg-white">
             <div>
               <h3 className="text-xl font-bold text-gray-900">Patient Profile</h3>
@@ -96,8 +95,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
 
           <div className="p-8">
             <div className="flex flex-col md:flex-row gap-8">
-              
-              {/* Left Col: Identity */}
               <div className="flex-shrink-0 text-center md:text-left">
                 <div className="w-24 h-24 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-2xl flex items-center justify-center mx-auto md:mx-0 mb-4 shadow-inner">
                   <span className="text-4xl font-bold text-blue-600">
@@ -112,13 +109,9 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                 </div>
               </div>
 
-              {/* Right Col: Details Grid */}
               <div className="flex-grow grid grid-cols-1 gap-6">
-                
-                {/* Contact Section */}
                 <div className="space-y-4">
                   <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Contact Information</h4>
-                  
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
                       <Phone className="w-5 h-5" />
@@ -128,7 +121,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                       <p className="font-medium text-gray-900">{patient.phone}</p>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
                       <Mail className="w-5 h-5" />
@@ -138,7 +130,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                       <p className="font-medium text-gray-900 truncate max-w-[200px]">{patient.email}</p>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-4">
                     <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center text-gray-400">
                       <MapPin className="w-5 h-5" />
@@ -152,20 +143,16 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                     </div>
                   </div>
                 </div>
-
               </div>
             </div>
 
-            {/* Medical Card Section */}
             <div className="mt-8 pt-6 border-t border-gray-100">
               <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Latest Screening Result</h4>
-              
               <div className={`rounded-2xl p-5 border ${
                 isPositive 
                   ? 'bg-orange-50 border-orange-100' 
                   : 'bg-green-50 border-green-100'
               } flex items-center justify-between`}>
-                
                 <div className="flex items-center gap-4">
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
                     isPositive ? 'bg-orange-100 text-orange-600' : 'bg-green-100 text-green-600'
@@ -185,7 +172,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                     </p>
                   </div>
                 </div>
-
                 <div className="text-right">
                   <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide mb-1 ${
                     patient.riskLevel === 'High' ? 'bg-red-200 text-red-800' :
@@ -196,7 +182,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                   </span>
                   <p className="text-xs text-gray-500 mt-1">Tested: {patient.lastTest}</p>
                 </div>
-
               </div>
             </div>
           </div>
@@ -213,10 +198,9 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
         user={user}
         isLoggedIn={true}
         onNavigate={onNavigate} 
-        displayName={doctorName ? `Dr. ${doctorName}` : 'Doctor'} // <--- PASS DISPLAY NAME
+        displayName={doctorName ? `Dr. ${doctorName}` : 'Doctor'} 
       />
 
-      {/* Render Modal */}
       {selectedPatient && (
         <PatientDetailsModal 
           patient={selectedPatient} 
@@ -226,22 +210,19 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
 
       <div className="flex-grow pt-32 pb-20 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
-          {/* Header */}
           <div className="mb-12 animate-fade-in">
-            {/* UPDATED HEADER TO SHOW NAME */}
             <h1 className="text-5xl font-bold text-gray-900 mb-4">
               {doctorName ? `Welcome, Dr. ${doctorName}` : 'Patient Dashboard'}
             </h1>
             <p className="text-xl text-gray-600">Monitor and manage patient records</p>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid md:grid-cols-4 gap-6 mb-12">
+          {/* Stats Cards - Updated Grid to 3 cols */}
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
             {[
               { icon: Users, label: "Total Patients", value: stats.total || 0, gradient: "from-blue-500 to-blue-600" },
               { icon: CheckCircle, label: "Negative Cases", value: stats.negative || 0, gradient: "from-green-500 to-green-600" },
               { icon: AlertCircle, label: "Positive Cases", value: stats.positive || 0, gradient: "from-orange-500 to-orange-600" },
-              { icon: Activity, label: "Under Review", value: stats.underReview || 0, gradient: "from-purple-500 to-purple-600" }
             ].map((stat, idx) => (
               <div key={idx} className={`bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover-lift animate-fade-in stagger-${idx + 1}`}>
                 <div className="flex items-center justify-between mb-4">
@@ -255,7 +236,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
             ))}
           </div>
 
-          {/* Filter Section */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-6 mb-8 animate-fade-in stagger-5">
             <div className="flex items-center space-x-4">
               <Filter className="w-5 h-5 text-gray-400" />
@@ -272,7 +252,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
             </div>
           </div>
 
-          {/* Patient List */}
           <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden animate-fade-in stagger-5">
             <div className="px-8 py-6 border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
               <h2 className="text-2xl font-bold text-gray-900">Patient Records</h2>
@@ -300,6 +279,13 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                           </div>
                           <div>
                             <h3 className="font-bold text-gray-900 text-lg mb-1">{patient.name}</h3>
+                            
+                            {/* ADDED EMAIL DISPLAY HERE */}
+                            <div className="flex items-center text-gray-500 text-sm mb-1.5">
+                                <Mail className="w-3.5 h-3.5 mr-1.5" />
+                                {patient.email}
+                            </div>
+                            
                             <p className="text-gray-600 flex items-center space-x-2">
                               <span>Age {patient.age}</span>
                               <span className="text-gray-400">•</span>
