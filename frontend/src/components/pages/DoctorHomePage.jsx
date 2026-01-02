@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail } from 'lucide-react';
+import { Activity, Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail, Download } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 import api from '../../lib/api';
@@ -88,9 +88,40 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
 
   // Modal Component
   const PatientDetailsModal = ({ patient, onClose }) => {
+    const [downloading, setDownloading] = useState(false);
+
     if (!patient) return null;
 
     const isPositive = patient.result === 'Positive';
+
+    const handleDownloadReport = async () => {
+      setDownloading(true);
+      try {
+        // Fetch the report as a blob
+        const response = await api.get(`/report/${patient.id}/`, { 
+          responseType: 'blob' 
+        });
+        
+        // Create a URL for the blob
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        
+        // Create a temporary link element to trigger the download
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `RespireX_Report_${patient.name.replace(/\s+/g, '_')}_${patient.id}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        
+        // Cleanup
+        link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Failed to download report:", err);
+        alert("Could not download the report. Please try again.");
+      } finally {
+        setDownloading(false);
+      }
+    };
 
     return (
       <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in">
@@ -163,7 +194,22 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
             </div>
 
             <div className="mt-8 pt-6 border-t border-gray-100">
-              <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Latest Screening Result</h4>
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider">Latest Screening Result</h4>
+                <button 
+                  onClick={handleDownloadReport}
+                  disabled={downloading}
+                  className="flex items-center gap-2 px-4 py-2 bg-gray-900 text-white rounded-lg text-sm font-medium hover:bg-gray-800 transition disabled:opacity-50"
+                >
+                  {downloading ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <Download className="w-4 h-4" />
+                  )}
+                  {downloading ? 'Downloading...' : 'Download Official Report'}
+                </button>
+              </div>
+              
               <div className={`rounded-2xl p-5 border ${
                 isPositive 
                   ? 'bg-orange-50 border-orange-100' 

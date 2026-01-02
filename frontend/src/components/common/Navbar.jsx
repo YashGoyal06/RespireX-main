@@ -12,7 +12,7 @@ const Navbar = ({
   showBackButton, 
   showCancelButton,
   onNavigate,
-  displayName // <--- ADD THIS PROP
+  displayName 
 }) => {
   const DOCTOR_DEFAULT_IMG = "/doctorpfp.jpg"; 
   const PATIENT_MALE_IMG = "/male.jpg";
@@ -21,10 +21,8 @@ const Navbar = ({
 
   // Helper: Get Display Name
   const getDisplayName = () => {
-    if (displayName) return displayName; // <--- ADD THIS: Use custom name if provided
+    if (displayName) return displayName; 
     
-    // Removed the hardcoded return 'Doctor' to allow fallback to other methods if needed, 
-    // or you can keep it as a fallback:
     if (userType === 'doctor') return 'Doctor';
     
     if (!user) return 'Guest';
@@ -47,7 +45,8 @@ const Navbar = ({
   };
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 glass-effect border-b border-gray-100 bg-white/80 backdrop-blur-md">
+    // Updated to a stronger "Glassy" theme
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-lg border-b border-white/20 shadow-lg">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           
@@ -77,7 +76,7 @@ const Navbar = ({
             {showBackButton && onBack && (
               <button
                 onClick={onBack}
-                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition"
+                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-900 hover:bg-white/40 rounded-full transition"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="font-medium">Back</span>
@@ -88,7 +87,7 @@ const Navbar = ({
             {showCancelButton && onCancel && (
               <button
                 onClick={onCancel}
-                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full transition"
+                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-900 hover:bg-white/40 rounded-full transition"
               >
                 <X className="w-5 h-5" />
                 <span className="font-medium">Cancel</span>
@@ -100,7 +99,7 @@ const Navbar = ({
               <div className="flex items-center gap-4">
                 
                 {/* User Profile Section */}
-                <div className="flex items-center gap-3 pl-4 border-l border-gray-200">
+                <div className="flex items-center gap-3 pl-4 border-l border-gray-200/50">
                   <div className="h-10 w-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-100 flex items-center justify-center">
                     <img 
                       src={getAvatarUrl()} 
@@ -125,7 +124,7 @@ const Navbar = ({
                 {/* Logout Button */}
                 <button
                   onClick={onLogout}
-                  className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition group"
+                  className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50/50 rounded-full transition group"
                 >
                   <LogOut className="w-5 h-5 group-hover:text-red-600" />
                   <span className="font-medium">Logout</span>
