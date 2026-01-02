@@ -10,6 +10,9 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // New: Track which specific test ID is currently downloading to show a spinner
+  const [downloadingId, setDownloadingId] = useState(null);
 
   useEffect(() => {
     fetchTestHistory();
@@ -64,28 +67,34 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
     }
   };
 
-  const handleDownload = (test) => {
-    const reportContent = `
-TB Screening Report
-==================
-Test ID: ${test.id}
-Date: ${test.fullDate}
-Result: ${test.result}
-Confidence: ${test.confidence}%
-Risk Level: ${test.riskLevel}
+  // UPDATED: Fetch PDF from Backend instead of generating text file locally
+  const handleDownload = async (test) => {
+    try {
+      setDownloadingId(test.id); // Start loading spinner for this specific button
 
-Note: This is a preliminary screening result. Please consult a healthcare professional.
-    `;
-    
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `TB_Report_${test.id}_${test.date.replace(/\s/g, '_')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+      // Request the PDF from the backend
+      const response = await api.get(`/report/${test.id}/`, {
+          responseType: 'blob' // Important: treat response as binary data
+      });
+
+      // Create a URL for the blob
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `RespireX_Report_${test.id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      
+      // Cleanup
+      link.parentNode.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error("Download failed:", error);
+      alert("Failed to download PDF report. Please try again.");
+    } finally {
+      setDownloadingId(null); // Stop loading spinner
+    }
   };
 
   // Loading State
@@ -95,7 +104,6 @@ Note: This is a preliminary screening result. Please consult a healthcare profes
         <Navbar 
           showBackButton={true}
           onBack={() => onNavigate('patient-home')}
-          // Pass Auth Props Here too
           isLoggedIn={true}
           user={user}
           onLogout={onLogout}
@@ -118,7 +126,6 @@ Note: This is a preliminary screening result. Please consult a healthcare profes
         <Navbar 
           showBackButton={true}
           onBack={() => onNavigate('patient-home')}
-          // Pass Auth Props Here too
           isLoggedIn={true}
           user={user}
           onLogout={onLogout}
@@ -241,10 +248,15 @@ Note: This is a preliminary screening result. Please consult a healthcare profes
                       </div>
                       <button 
                         onClick={() => handleDownload(test)}
-                        className="px-6 py-3 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold flex items-center space-x-2"
+                        disabled={downloadingId === test.id} // Disable only this button while downloading
+                        className="px-6 py-3 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Download className="w-5 h-5" />
-                        <span>Download</span>
+                        {downloadingId === test.id ? (
+                          <Loader className="w-5 h-5 animate-spin" />
+                        ) : (
+                          <Download className="w-5 h-5" />
+                        )}
+                        <span>{downloadingId === test.id ? 'PDF...' : 'Download'}</span>
                       </button>
                     </div>
 

@@ -1,31 +1,41 @@
-import React from 'react';
-import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Activity } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Activity, Loader } from 'lucide-react';
 import Navbar from '../common/Navbar';
+import api from '../../lib/api';
 
 const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers }) => {
-  const result = resultData?.result || {};
-  const xrayImage = resultData?.originalImage || null;
+  const [downloading, setDownloading] = useState(false);
+
+  // --- FIX: Robust ID Extraction ---
+  // If coming from Upload Page, data is in resultData.result.id
+  // If coming from History Page (future proofing), it might be resultData.id
+  const result = resultData?.result || resultData || {};
+  const resultId = result.id; 
+  // --------------------------------
+
+  const xrayImage = resultData?.xray_image_url || resultData?.originalImage || null;
   
   const detected = result.result === 'Positive';
   const modelConfidence = parseFloat(result.confidence_score) || 0;
   const riskLevel = result.risk_level || 'Low';
-  const uploadDate = resultData?.uploadDate ? new Date(resultData.uploadDate).toLocaleDateString('en-US', { 
-    month: 'long', 
-    day: 'numeric', 
-    year: 'numeric' 
-  }) : new Date().toLocaleDateString('en-US', { 
-    month: 'long', 
-    day: 'numeric', 
-    year: 'numeric' 
-  });
+  
+  const uploadDate = resultData?.uploadDate 
+    ? new Date(resultData.uploadDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
   const calculateScores = () => {
     let symptomScore = 0;
-    if (symptomAnswers) {
+    // 1. Try to use backend data if available (History view)
+    if (result.symptoms_data) {
+        const answers = Object.values(result.symptoms_data);
+        const yesCount = answers.filter(a => typeof a === 'string' && a.toLowerCase() === 'yes').length;
+        symptomScore = (yesCount / 8) * 100;
+    } 
+    // 2. Fallback to local state (Upload view)
+    else if (symptomAnswers) {
       const answers = Object.values(symptomAnswers);
       const yesCount = answers.filter(a => a === 'Yes').length;
-      const totalQuestions = 8; 
-      symptomScore = (yesCount / totalQuestions) * 100;
+      symptomScore = (yesCount / 8) * 100;
     }
 
     const meanScore = (modelConfidence + symptomScore) / 2;
@@ -36,22 +46,18 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
 
   const getMedications = () => {
     if (detected) {
-      // Standard First-Line Anti-TB Drugs (RIPE Therapy)
       return {
-        // Title handled in JSX now
         type: "critical",
         note: "Standard First-Line Regimen (Subject to Doctor's Prescription)",
         meds: [
           { name: "Isoniazid (H)", dose: "5 mg/kg", desc: "Antibiotic used for treatment of tuberculosis." },
-          { name: "Rifampicin (R)", dose: "10 mg/kg", desc: "Antibiotic used to treat several types of bacterial infections." },
+          { name: "Rifampicin (R)", dose: "10 mg/kg", desc: "Antibiotic used to treat bacterial infections." },
           { name: "Pyrazinamide (Z)", dose: "25 mg/kg", desc: "Used in the first 2 months of treatment." },
           { name: "Ethambutol (E)", dose: "15 mg/kg", desc: "Prevents bacteria from reproducing." }
         ]
       };
     } else {
-      // General Immunity Boosters
       return {
-        // Title handled in JSX now
         type: "preventive",
         note: "Supplements to boost respiratory health",
         meds: [
@@ -65,31 +71,34 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
 
   const medicationData = getMedications();
 
-  const handleDownload = () => {
-    const medList = medicationData.meds.map(m => `- ${m.name} (${m.dose})`).join('\n');
-    
-    const reportContent = `
-TB Screening Report
-==================
-Date: ${uploadDate}
-Result: ${detected ? 'TB Signs Detected' : 'No TB Signs Detected'}
-Combined Confidence Score: ${meanScore.toFixed(1)}%
+  const handleDownload = async () => {
+    if (!resultId) {
+        console.error("Debug Info:", resultData); // For debugging
+        alert("Report ID missing. Cannot download.");
+        return;
+    }
 
-Suggested Medications:
-${medList}
+    try {
+        setDownloading(true);
+        const response = await api.get(`/report/${resultId}/`, {
+            responseType: 'blob' 
+        });
 
-DISCLAIMER: This is an AI generated report. Do not take medications without doctor approval.
-    `;
-    
-    const blob = new Blob([reportContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `TB_Report_${new Date().toISOString().split('T')[0]}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    window.URL.revokeObjectURL(url);
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `RespireX_Report_${resultId}.pdf`);
+        document.body.appendChild(link);
+        link.click();
+        
+        link.parentNode.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    } catch (error) {
+        console.error("Download failed:", error);
+        alert("Failed to download report. Please try again.");
+    } finally {
+        setDownloading(false);
+    }
   };
 
   const handleShare = () => {
@@ -185,10 +194,15 @@ DISCLAIMER: This is an AI generated report. Do not take medications without doct
             <div className="flex space-x-4 justify-center">
               <button 
                 onClick={handleDownload}
-                className="flex items-center space-x-2 px-8 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold shadow-lg"
+                disabled={downloading}
+                className="flex items-center space-x-2 px-8 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold shadow-lg disabled:opacity-50"
               >
-                <Download className="w-5 h-5" />
-                <span>Download Report</span>
+                {downloading ? (
+                    <Loader className="w-5 h-5 animate-spin" />
+                ) : (
+                    <Download className="w-5 h-5" />
+                )}
+                <span>{downloading ? 'Generating PDF...' : 'Download Report'}</span>
               </button>
               <button 
                 onClick={handleShare}
@@ -213,8 +227,8 @@ DISCLAIMER: This is an AI generated report. Do not take medications without doct
             </div>
           )}
 
+          {/* Recommendations & Meds Grid */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
-            {/* Recommendations */}
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 animate-fade-in stagger-2">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
                 <FileText className="w-7 h-7 text-blue-600" />
@@ -247,7 +261,6 @@ DISCLAIMER: This is an AI generated report. Do not take medications without doct
               </div>
             </div>
 
-            {/* Suggested Medications (Updated Styling) */}
             <div className={`rounded-2xl shadow-lg p-8 animate-fade-in stagger-3 border ${
               detected 
                 ? 'bg-orange-50 border-orange-100' 

@@ -1,11 +1,16 @@
 from rest_framework import views, response, status
+from rest_framework.permissions import IsAuthenticated
+from django.http import HttpResponse
+from django.shortcuts import get_object_or_404
+import json
+import os
+from rest_framework.response import Response
+
 from .models import UserProfile, TestResult
 from .serializers import UserProfileSerializer, TestResultSerializer
 from .ml_engine import predict_xray
 from .storage import upload_to_supabase
-import json
-import os # Import OS to read .env
-from rest_framework.permissions import IsAuthenticated
+from .pdf_generator import generate_medical_pdf  # Ensure you created this file as discussed
 
 class UserProfileView(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -16,22 +21,13 @@ class UserProfileView(views.APIView):
         profile, created = UserProfile.objects.get_or_create(user=user)
         
         # --- ROBUST ROLE PROTECTION & LOGIC ---
-        # Normalize existing role (handle None or whitespace)
         current_role = str(profile.role).strip().lower() if profile.role else ""
-        
-        # Get requested role from frontend
         requested_role = data.get('role', 'patient').strip().lower()
         
-        # CHECK: If user is ALREADY a doctor, we LOCK their role.
-        # This prevents accidental downgrades to 'patient' if the frontend 
-        # sends a default 'patient' role during profile updates.
         if current_role == 'doctor':
-            pass # Do nothing. Keep them as doctor.
-            
+            pass 
         else:
-            # Only allow role change if they are NOT currently a doctor
             if requested_role == 'doctor':
-                # Verify Access Code to BECOME a doctor
                 provided_code = data.get('access_code')
                 secure_code = os.getenv('DOCTOR_ACCESS_CODE')
                 
@@ -43,7 +39,6 @@ class UserProfileView(views.APIView):
                         status=status.HTTP_403_FORBIDDEN
                     )
             else:
-                # Default to patient
                 profile.role = 'patient'
         # --------------------------------
 
@@ -52,12 +47,9 @@ class UserProfileView(views.APIView):
         profile.age = data.get('age')
         profile.gender = data.get('gender', '')
         profile.license_number = data.get('licenseNumber', None)
-        
-        # --- SAVE NEW FIELDS ---
         profile.full_name = data.get('full_name', '')
         profile.phone = data.get('phone', '')
         profile.address = data.get('address', '')
-        # -----------------------
         
         profile.save()
         return response.Response(UserProfileSerializer(profile).data)
@@ -84,17 +76,14 @@ class PredictionView(views.APIView):
         if not image_file:
             return response.Response({"error": "No image provided"}, status=400)
 
-        # Upload to Supabase
         try:
             image_url = upload_to_supabase(image_file)
         except Exception as e:
             return response.Response({"error": f"Image upload failed: {str(e)}"}, status=500)
         
-        # ML Prediction
         image_file.seek(0)
         result, confidence, risk_level = predict_xray(image_file)
         
-        # Save to DB
         test_record = TestResult.objects.create(
             patient=user_profile,
             xray_image_url=image_url,
@@ -140,8 +129,31 @@ class DoctorDashboardView(views.APIView):
                 "total": queryset.count(),
                 "positive": queryset.filter(result='Positive').count(),
                 "negative": queryset.filter(result='Negative').count(),
-                # Removed 'underReview' from here to keep data clean, though frontend ignores it now
                 "underReview": 0 
             },
             "records": TestResultSerializer(queryset, many=True).data
         })
+
+class DownloadReportView(views.APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request, pk):
+        try:
+            # Check permissions: Doctors can see all, Patients only their own
+            if hasattr(request.user, 'profile') and request.user.profile.role == 'doctor':
+                test_result = get_object_or_404(TestResult, pk=pk)
+            else:
+                test_result = get_object_or_404(TestResult, pk=pk, patient__user=request.user)
+                
+            pdf_buffer = generate_medical_pdf(test_result)
+            
+            # Return the PDF as a binary blob
+            filename = f"RespireX_Report_{test_result.id}.pdf"
+            response = HttpResponse(pdf_buffer, content_type='application/pdf')
+            response['Content-Disposition'] = f'attachment; filename="{filename}"'
+            
+            return response
+            
+        except Exception as e:
+                print(f"Error generating PDF: {e}") # Ensure the error is logged
+                return Response({"error": "Failed to generate report"}, status=500)
