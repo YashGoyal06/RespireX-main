@@ -6,6 +6,8 @@ import Navbar from '../common/Navbar';
 const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
 
+  // Questions specifically related to TB detection (Yes/No)
+  // Each "Yes" increases the likelihood/confidence of TB presence in the Symptom Score.
   const questions = [
     {
       id: 1,
