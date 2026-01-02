@@ -10,6 +10,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const [doctorName, setDoctorName] = useState(''); // <--- NEW STATE
 
   const states = [
     'All States', 'Andhra Pradesh', 'Bihar', 'Gujarat', 'Karnataka', 
@@ -17,6 +18,22 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     'Tamil Nadu', 'Uttar Pradesh', 'West Bengal'
   ];
 
+  // Fetch Doctor Profile (Name)
+  useEffect(() => {
+    const fetchProfile = async () => {
+      try {
+        const response = await api.get('/profile/');
+        if (response.data.full_name) {
+          setDoctorName(response.data.full_name);
+        }
+      } catch (err) {
+        console.error("Failed to fetch doctor profile:", err);
+      }
+    };
+    fetchProfile();
+  }, []);
+
+  // Fetch Dashboard Data
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -53,7 +70,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     fetchData();
   }, [selectedState]);
 
-  // 🎨 REDESIGNED MODAL: Minimal & Professional
+  // ... [PatientDetailsModal Code remains exactly the same] ...
   const PatientDetailsModal = ({ patient, onClose }) => {
     if (!patient) return null;
 
@@ -128,7 +145,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                     </div>
                     <div>
                       <p className="text-sm text-gray-500">Location</p>
-                      {/* Address Logic: Only show street address if it exists */}
                       <p className="font-medium text-gray-900">
                         {patient.address ? `${patient.address}, ` : ''}
                         {patient.city}, {patient.state}
@@ -197,6 +213,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
         user={user}
         isLoggedIn={true}
         onNavigate={onNavigate} 
+        displayName={doctorName ? `Dr. ${doctorName}` : 'Doctor'} // <--- PASS DISPLAY NAME
       />
 
       {/* Render Modal */}
@@ -211,7 +228,10 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
         <div className="max-w-7xl mx-auto">
           {/* Header */}
           <div className="mb-12 animate-fade-in">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">Patient Dashboard</h1>
+            {/* UPDATED HEADER TO SHOW NAME */}
+            <h1 className="text-5xl font-bold text-gray-900 mb-4">
+              {doctorName ? `Welcome, Dr. ${doctorName}` : 'Patient Dashboard'}
+            </h1>
             <p className="text-xl text-gray-600">Monitor and manage patient records</p>
           </div>
 
