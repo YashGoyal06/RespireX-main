@@ -177,6 +177,7 @@ const App = () => {
           resultData={pageData} 
           onLogout={handleLogout}
           user={user}
+          symptomAnswers={symptomAnswers} // <--- Added to pass answers to Result Page
         />;
 
       default: return <LandingPage onNavigate={handleNavigate} />;
