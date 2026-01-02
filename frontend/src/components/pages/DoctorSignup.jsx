@@ -12,9 +12,7 @@ const DoctorSignup = ({ onNavigate, onBack }) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  // 🔐 DEMO CONFIGURATION
-  // In a real app, each doctor would create their own account.
-  // For this demo, we auto-login a shared "Master Doctor" account.
+  //  DEMO CONFIGURATION
   const DEMO_ACCESS_CODE = "DOC2024"; 
   const DEMO_DOCTOR_EMAIL = "doctor@admin.com"; // Must match Supabase User
   const DEMO_DOCTOR_PASS = "doctor123";         // Must match Supabase User
@@ -78,18 +76,7 @@ const DoctorSignup = ({ onNavigate, onBack }) => {
 
       <div className="flex items-center justify-center min-h-screen px-4 pt-20 pb-12">
         <div className="max-w-xl w-full">
-          <div className="text-center mb-10 animate-fade-in stagger-1">
-            <div className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl overflow-hidden">
-              <img 
-                src="/respirex-logo.png" 
-                alt="RespireX Logo" 
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.parentElement.style.background = 'linear-gradient(to bottom right, #0891b2, #0e7490)';
-                }}
-              />
-            </div>
+          <div className="text-center pt-5 mb-10 animate-fade-in stagger-1">
             <h2 className="text-4xl font-bold text-gray-900 mb-3">Doctor Verification</h2>
             <p className="text-gray-600 text-lg">Enter your credentials to access doctor dashboard</p>
           </div>
