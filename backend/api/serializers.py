@@ -15,6 +15,9 @@ class TestResultSerializer(serializers.ModelSerializer):
     patient_name = serializers.SerializerMethodField()
     
     # Fetch extra patient details
+    # 👇 ADDED THIS LINE 👇
+    email = serializers.CharField(source='patient.user.email', read_only=True) 
+    
     state = serializers.CharField(source='patient.state', read_only=True)
     city = serializers.CharField(source='patient.city', read_only=True)
     age = serializers.IntegerField(source='patient.age', read_only=True)
