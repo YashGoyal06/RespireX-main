@@ -2,8 +2,8 @@ import axios from 'axios';
 import { supabase } from './supabase'; 
 
 const api = axios.create({
-  baseURL: 'http://localhost:8000/api',
-  timeout: 10000, // 10 second timeout
+  // Fallback to localhost if env var is missing
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api', 
 });
 
 // Track ongoing requests to prevent duplicates

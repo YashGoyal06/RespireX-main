@@ -32,6 +32,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware', # Must be at top
     'django.middleware.security.SecurityMiddleware',
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -63,7 +64,7 @@ WSGI_APPLICATION = 'respirex_backend.wsgi.application'
 # Database
 DATABASES = {
     'default': dj_database_url.config(
-        default=os.getenv('DATABASE_URL'),
+        default='sqlite:///db.sqlite3',
         conn_max_age=600
     )
 }
@@ -109,3 +110,8 @@ CORS_ALLOW_HEADERS = list(default_headers) + [
     'x-csrftoken',
     'x-requested-with',
 ]
+ALLOWED_HOSTS = ['*']  # You can replace '*' with your specific Render URL later
+STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+CORS_ALLOW_ALL_ORIGINS = True # For simplicity. Or list your frontend Render URL here later.
