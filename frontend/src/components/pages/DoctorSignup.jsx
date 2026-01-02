@@ -95,7 +95,7 @@ const DoctorSignup = ({ onNavigate, onBack }) => {
       className="min-h-screen bg-slate-50"
       // 👇👇👇 PASTE YOUR IMAGE PATH BELOW INSIDE THE url('') 👇👇👇
       style={{ 
-        backgroundImage: "url('YOUR_IMAGE_PATH_HERE')", 
+        backgroundImage: "url('/login-bg.jpg')", 
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
