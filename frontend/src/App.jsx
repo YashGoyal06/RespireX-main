@@ -14,7 +14,8 @@ import XRayUploadPage from './components/pages/XRayUploadPage';
 
 import { supabase } from './lib/supabase';
 import api from './lib/api';
-import { Loader } from 'lucide-react';
+// import { Loader } from 'lucide-react'; // Removed
+import { GooeyLoader } from './components/common/GooeyLoader'; // Added
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -188,7 +189,13 @@ const App = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          <Loader className="w-10 h-10 text-blue-600 animate-spin mx-auto mb-4" />
+          {/* Changed Loader to GooeyLoader */}
+          <GooeyLoader 
+            className="mx-auto mb-8"
+            primaryColor="#60a5fa" 
+            secondaryColor="#bae6fd" 
+            borderColor="#bfdbfe" 
+          />
           <p className="text-gray-600">Loading...</p>
         </div>
       </div>
