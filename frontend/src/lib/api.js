@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { supabase } from './supabase'; 
 
+// SHORTCUT FIX: Use environment variable for URL, fallback to localhost
 const api = axios.create({
-  // Fallback to localhost if env var is missing
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api', 
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
+  timeout: 30000, // Increased timeout for AI predictions (30s)
 });
 
 // Track ongoing requests to prevent duplicates
@@ -19,7 +20,6 @@ api.interceptors.request.use(
       // Check if this exact request is already in progress
       if (ongoingRequests.has(requestKey)) {
         console.log("⏸️ Duplicate request blocked:", requestKey);
-        // Return the ongoing request promise instead of making a new one
         return ongoingRequests.get(requestKey);
       }
 
@@ -37,10 +37,8 @@ api.interceptors.request.use(
       const token = data?.session?.access_token;
       
       if (token) {
-        console.log("✅ Token attached to request");
+        // console.log("✅ Token attached to request"); // Reduced log noise
         config.headers.Authorization = `Bearer ${token}`;
-      } else {
-        console.warn("⚠️ No authentication token available");
       }
 
       // Store this request
@@ -49,7 +47,6 @@ api.interceptors.request.use(
       return config;
     } catch (error) {
       console.error("❌ Request interceptor error:", error.message);
-      // Continue with request even if token fetch fails
       return config;
     }
   },
@@ -62,32 +59,20 @@ api.interceptors.request.use(
 // Response Interceptor
 api.interceptors.response.use(
   (response) => {
-    // Clear the ongoing request
     const requestKey = `${response.config.method}-${response.config.url}`;
     ongoingRequests.delete(requestKey);
-    
-    console.log("✅ API Response:", response.config.url, response.status);
     return response;
   },
   async (error) => {
-    // Clear the ongoing request
     if (error.config) {
       const requestKey = `${error.config.method}-${error.config.url}`;
       ongoingRequests.delete(requestKey);
     }
     
-    console.error("❌ API Error:", error.config?.url, error.response?.status);
-    
-    // Handle specific error cases
-    if (error.response?.status === 401) {
-      console.log("🔒 Authentication error - session may have expired");
-    } else if (error.response?.status === 403) {
-      console.log("🚫 Permission denied");
-    } else if (error.response?.status === 404) {
-      console.log("🔍 Endpoint not found:", error.config?.url);
-    } else if (!error.response) {
-      console.error("🌐 Network error - backend may be down");
-      error.message = "Cannot connect to server. Please check if the backend is running on http://localhost:8000";
+    // Custom Error Message for Connection Failure
+    if (!error.response) {
+      console.error("🌐 Network error - backend unreachable");
+      error.message = "Cannot connect to server. If running locally, ensure 'python manage.py runserver' is running. If deployed, check your VITE_API_URL setting.";
     }
     
     return Promise.reject(error);
