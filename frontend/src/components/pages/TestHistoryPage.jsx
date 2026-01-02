@@ -5,13 +5,10 @@ import Footer from '../common/Footer';
 import api from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 
-// 1. Accept user and onLogout props
 const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
-  // New: Track which specific test ID is currently downloading to show a spinner
   const [downloadingId, setDownloadingId] = useState(null);
 
   useEffect(() => {
@@ -32,24 +29,53 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
 
       const response = await api.get('/history/');
       
-      const formattedData = response.data.map(test => ({
-        id: test.id,
-        date: new Date(test.date_tested).toLocaleDateString('en-US', { 
-          month: 'short', 
-          day: 'numeric', 
-          year: 'numeric' 
-        }),
-        fullDate: new Date(test.date_tested).toLocaleString('en-US', { 
-          dateStyle: 'long', 
-          timeStyle: 'short' 
-        }),
-        result: test.result || 'Unknown',
-        confidence: test.confidence_score > 1 
+      const formattedData = response.data.map(test => {
+        // --- ROBUST LOGIC FIX ---
+        
+        // 1. Normalize the result string to handle "Positive", "positive", "POSITIVE "
+        const rawResult = test.result || '';
+        const isPositive = rawResult.trim().toLowerCase() === 'positive';
+        
+        // 2. Handle Confidence (convert 0.53 -> 53 if needed)
+        // Checks if score is 0-1 range (like 0.85) or 0-100 range (like 85.0)
+        const confidence = test.confidence_score > 1 
           ? Math.round(test.confidence_score) 
-          : Math.round(test.confidence_score * 100),
-        riskLevel: test.risk_level || 'Low',
-        xrayUrl: test.xray_image_url || null
-      }));
+          : Math.round(test.confidence_score * 100);
+
+        // 3. Force Recalculate Risk Level
+        let calculatedRisk = 'Low'; 
+
+        if (isPositive) {
+            if (confidence > 80) {
+                calculatedRisk = 'High';
+            } else if (confidence >= 50) {
+                calculatedRisk = 'Medium';
+            } else {
+                calculatedRisk = 'Low';
+            }
+        } else {
+            // If Negative, Risk is ALWAYS Low, regardless of confidence
+            calculatedRisk = 'Low';
+        }
+        // ------------------------
+
+        return {
+          id: test.id,
+          date: new Date(test.date_tested).toLocaleDateString('en-US', { 
+            month: 'short', 
+            day: 'numeric', 
+            year: 'numeric' 
+          }),
+          fullDate: new Date(test.date_tested).toLocaleString('en-US', { 
+            dateStyle: 'long', 
+            timeStyle: 'short' 
+          }),
+          result: test.result || 'Unknown',
+          confidence: confidence,
+          riskLevel: calculatedRisk, // Uses the robust calculated value
+          xrayUrl: test.xray_image_url || null
+        };
+      });
 
       setTests(formattedData);
       
@@ -67,17 +93,13 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
     }
   };
 
-  // UPDATED: Fetch PDF from Backend instead of generating text file locally
   const handleDownload = async (test) => {
     try {
-      setDownloadingId(test.id); // Start loading spinner for this specific button
-
-      // Request the PDF from the backend
+      setDownloadingId(test.id); 
       const response = await api.get(`/report/${test.id}/`, {
-          responseType: 'blob' // Important: treat response as binary data
+          responseType: 'blob' 
       });
 
-      // Create a URL for the blob
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -85,30 +107,20 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
       document.body.appendChild(link);
       link.click();
       
-      // Cleanup
       link.parentNode.removeChild(link);
       window.URL.revokeObjectURL(url);
-
     } catch (error) {
       console.error("Download failed:", error);
       alert("Failed to download PDF report. Please try again.");
     } finally {
-      setDownloadingId(null); // Stop loading spinner
+      setDownloadingId(null);
     }
   };
 
-  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar 
-          showBackButton={true}
-          onBack={() => onNavigate('patient-home')}
-          isLoggedIn={true}
-          user={user}
-          onLogout={onLogout}
-          userType="patient"
-        />
+        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" />
         <div className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
@@ -119,36 +131,18 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
     );
   }
 
-  // Error State
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar 
-          showBackButton={true}
-          onBack={() => onNavigate('patient-home')}
-          isLoggedIn={true}
-          user={user}
-          onLogout={onLogout}
-          userType="patient"
-        />
+        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" />
         <div className="flex-grow flex items-center justify-center px-4">
           <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Data</h3>
             <p className="text-gray-600 mb-6">{error}</p>
             <div className="flex space-x-4">
-              <button 
-                onClick={fetchTestHistory}
-                className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition"
-              >
-                Try Again
-              </button>
-              <button 
-                onClick={() => onNavigate('patient-home')}
-                className="flex-1 px-6 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition"
-              >
-                Go Back
-              </button>
+              <button onClick={fetchTestHistory} className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Try Again</button>
+              <button onClick={() => onNavigate('patient-home')} className="flex-1 px-6 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition">Go Back</button>
             </div>
           </div>
         </div>
@@ -158,47 +152,20 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
-      {/* 2. Update Main Navbar */}
-      <Navbar 
-        showBackButton={true}
-        onBack={() => onNavigate('patient-home')}
-        isLoggedIn={true}    // <--- Forces logged in view
-        user={user}          // <--- Passes user data for avatar/name
-        onLogout={onLogout}  // <--- Enables logout
-        userType="patient"   // <--- Shows "Patient" badge
-      />
+      <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" />
 
       <div className="flex-grow pt-32 pb-20 px-6">
         <div className="max-w-5xl mx-auto">
-          {/* Header */}
           <div className="mb-12 animate-fade-in">
             <h1 className="text-5xl font-bold text-gray-900 mb-4">Test History</h1>
             <p className="text-xl text-gray-600">View all your previous screening results</p>
           </div>
 
-          {/* Stats Overview */}
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             {[
-              { 
-                label: "Total Tests", 
-                value: tests.length, 
-                icon: FileText, 
-                color: "blue" 
-              },
-              { 
-                label: "Negative Results", 
-                value: tests.filter(t => t.result.toLowerCase() === "negative").length, 
-                icon: CheckCircle, 
-                color: "green" 
-              },
-              { 
-                label: "Avg. Confidence", 
-                value: tests.length > 0 
-                  ? `${Math.round(tests.reduce((a, b) => a + b.confidence, 0) / tests.length)}%` 
-                  : "0%", 
-                icon: Activity, 
-                color: "purple" 
-              }
+              { label: "Total Tests", value: tests.length, icon: FileText, color: "blue" },
+              { label: "Negative Results", value: tests.filter(t => t.result.toLowerCase() === "negative").length, icon: CheckCircle, color: "green" },
+              { label: "Avg. Confidence", value: tests.length > 0 ? `${Math.round(tests.reduce((a, b) => a + b.confidence, 0) / tests.length)}%` : "0%", icon: Activity, color: "purple" }
             ].map((stat, idx) => (
               <div key={idx} className={`bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover-lift animate-fade-in stagger-${idx + 1}`}>
                 <div className="flex items-center justify-between mb-4">
@@ -212,32 +179,25 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
             ))}
           </div>
 
-          {/* Test History List */}
           <div className="space-y-6">
             {tests.length > 0 ? (
               tests.map((test, idx) => (
-                <div 
-                  key={test.id} 
-                  className={`bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover-lift animate-fade-in stagger-${idx + 1}`}
-                >
+                <div key={test.id} className={`bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover-lift animate-fade-in stagger-${idx + 1}`}>
                   <div className="p-8">
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-start space-x-6">
                         <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ${
-                          test.result.toLowerCase() === 'positive' 
-                            ? 'bg-gradient-to-br from-red-400 to-red-500' 
-                            : 'bg-gradient-to-br from-green-400 to-green-500'
+                          // Ensure color logic also uses the robust lowercase check
+                          String(test.result).toLowerCase() === 'positive' ? 'bg-gradient-to-br from-red-400 to-red-500' : 'bg-gradient-to-br from-green-400 to-green-500'
                         }`}>
-                           {test.result.toLowerCase() === 'positive' ? (
+                           {String(test.result).toLowerCase() === 'positive' ? (
                               <Activity className="w-9 h-9 text-white" strokeWidth={2.5} />
                            ) : (
                               <CheckCircle className="w-9 h-9 text-white" strokeWidth={2.5} />
                            )}
                         </div>
                         <div>
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                            {test.result} Result
-                          </h3>
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{test.result} Result</h3>
                           <div className="flex items-center space-x-4 text-gray-600">
                             <div className="flex items-center space-x-2">
                               <Calendar className="w-5 h-5" />
@@ -248,14 +208,10 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                       </div>
                       <button 
                         onClick={() => handleDownload(test)}
-                        disabled={downloadingId === test.id} // Disable only this button while downloading
+                        disabled={downloadingId === test.id}
                         className="px-6 py-3 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        {downloadingId === test.id ? (
-                          <Loader className="w-5 h-5 animate-spin" />
-                        ) : (
-                          <Download className="w-5 h-5" />
-                        )}
+                        {downloadingId === test.id ? <Loader className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                         <span>{downloadingId === test.id ? 'PDF...' : 'Download'}</span>
                       </button>
                     </div>
@@ -265,8 +221,7 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                         <p className="text-sm text-gray-600 mb-2">Confidence Level</p>
                         <div className="flex items-center space-x-3">
                           <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
-                            <div 
-                              className={`h-3 rounded-full transition-all ${
+                            <div className={`h-3 rounded-full transition-all ${
                                 test.confidence > 80 ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-yellow-500 to-orange-600'
                               }`}
                               style={{ width: `${test.confidence}%` }}
@@ -287,9 +242,7 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                       </div>
                       <div>
                         <p className="text-sm text-gray-600 mb-2">Test Status</p>
-                        <div className="inline-block px-6 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold">
-                          Completed
-                        </div>
+                        <div className="inline-block px-6 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold">Completed</div>
                       </div>
                     </div>
                   </div>
@@ -302,29 +255,18 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                 </div>
                 <h3 className="text-2xl font-bold text-gray-900 mb-4">No Test History Yet</h3>
                 <p className="text-gray-600 mb-8">Start your first TB screening test to see results here</p>
-                <button
-                  onClick={() => onNavigate('symptom-test')}
-                  className="px-10 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary"
-                >
-                  Start Test
-                </button>
+                <button onClick={() => onNavigate('symptom-test')} className="px-10 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary">Start Test</button>
               </div>
             )}
           </div>
-
-          {/* Info Card */}
           {tests.length > 0 && (
             <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-8 text-white animate-fade-in">
               <h3 className="text-2xl font-bold mb-4">Keep Track of Your Health</h3>
-              <p className="text-lg leading-relaxed opacity-90">
-                Regular screening helps in early detection and better health outcomes. 
-                We recommend taking a test every 3 months or if you experience any symptoms.
-              </p>
+              <p className="text-lg leading-relaxed opacity-90">Regular screening helps in early detection and better health outcomes.</p>
             </div>
           )}
         </div>
       </div>
-
       <Footer />
     </div>
   );

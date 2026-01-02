@@ -41,23 +41,39 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
         const response = await api.get(`/doctor/dashboard/?state=${selectedState === 'All States' ? 'all' : selectedState}`);
         setStats(response.data.stats);
         
-        const mappedPatients = response.data.records.map(record => ({
-          id: record.id,
-          name: record.patient_name || record.full_name || "Unknown Patient", 
-          age: record.age || "N/A",
-          gender: record.gender || "N/A",
-          state: record.state || "",
-          city: record.city || "",
-          address: record.address || record.street_address || "", 
-          email: record.email || record.patient_email || "Not provided", 
-          phone: record.phone || record.phone_number || record.contact || "Not provided",
-          lastTest: new Date(record.date_tested).toLocaleDateString('en-US', {
-            year: 'numeric', month: 'long', day: 'numeric'
-          }),
-          result: record.result,
-          riskLevel: record.risk_level,
-          confidence: record.confidence_score ? Math.round(record.confidence_score) : 0
-        }));
+        const mappedPatients = response.data.records.map(record => {
+          // --- UPDATED RISK LOGIC FOR DISPLAY ---
+          const confidence = record.confidence_score ? Math.round(record.confidence_score) : 0;
+          let calculatedRisk = record.risk_level;
+
+          // Force update logic based on confidence score (handles old data)
+          if (record.result === 'Positive') {
+            if (confidence > 80) calculatedRisk = 'High';
+            else if (confidence >= 50) calculatedRisk = 'Medium';
+            else calculatedRisk = 'Low';
+          } else {
+            calculatedRisk = 'Low';
+          }
+          // -------------------------------------
+
+          return {
+            id: record.id,
+            name: record.patient_name || record.full_name || "Unknown Patient", 
+            age: record.age || "N/A",
+            gender: record.gender || "N/A",
+            state: record.state || "",
+            city: record.city || "",
+            address: record.address || record.street_address || "", 
+            email: record.email || record.patient_email || "Not provided", 
+            phone: record.phone || record.phone_number || record.contact || "Not provided",
+            lastTest: new Date(record.date_tested).toLocaleDateString('en-US', {
+              year: 'numeric', month: 'long', day: 'numeric'
+            }),
+            result: record.result,
+            riskLevel: calculatedRisk, // Use the calculated risk
+            confidence: confidence
+          };
+        });
         
         setPatients(mappedPatients);
       } catch (err) {

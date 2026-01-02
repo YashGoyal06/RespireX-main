@@ -15,7 +15,6 @@ class TestResultSerializer(serializers.ModelSerializer):
     patient_name = serializers.SerializerMethodField()
     
     # Fetch extra patient details
-    # 👇 ADDED THIS LINE 👇
     email = serializers.CharField(source='patient.user.email', read_only=True) 
     
     state = serializers.CharField(source='patient.state', read_only=True)
@@ -23,6 +22,9 @@ class TestResultSerializer(serializers.ModelSerializer):
     age = serializers.IntegerField(source='patient.age', read_only=True)
     gender = serializers.CharField(source='patient.gender', read_only=True)
     phone = serializers.CharField(source='patient.phone', read_only=True)
+
+    # OVERRIDE the model field to dynamically calculate risk level for ALL records (old and new)
+    risk_level = serializers.SerializerMethodField()
 
     class Meta:
         model = TestResult
@@ -33,3 +35,20 @@ class TestResultSerializer(serializers.ModelSerializer):
         if obj.patient.full_name:
             return obj.patient.full_name
         return obj.patient.user.email
+
+    def get_risk_level(self, obj):
+        """
+        Dynamically calculates Risk Level based on Confidence Score.
+        This ensures 'Medium' is returned for 50-80% even if the DB says 'Low'.
+        """
+        if obj.result == 'Negative':
+            return 'Low'
+        
+        # Positive Case Logic
+        # obj.confidence_score is stored as 0-100 float
+        if obj.confidence_score > 80:
+            return 'High'
+        elif obj.confidence_score >= 50:
+            return 'Medium'
+        else:
+            return 'Low'

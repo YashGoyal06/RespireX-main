@@ -24,8 +24,6 @@ def get_base64_image(url):
 def generate_scatter_plot(model_conf, symptom_score):
     """
     Generates a Linear Regression style plot with a SCIENTIFIC GRID.
-    - Population (Green): Follows a low-risk baseline trend.
-    - Patient (Red): Plotted by actual scores.
     """
     # 1. Setup Figure
     fig, ax = plt.subplots(figsize=(6, 4), dpi=300)
@@ -112,6 +110,19 @@ def generate_medical_pdf(test_result):
     symptom_score = (yes_count / 8) * 100
     mean_score = (model_conf + symptom_score) / 2
     is_positive = test_result.result == 'Positive'
+
+    # --- DYNAMIC RISK RECALCULATION (Fix for PDF) ---
+    # This ensures old "Low" records show as "Medium" if score is 50-80%
+    if is_positive:
+        if model_conf > 80:
+            current_risk_level = "High"
+        elif model_conf >= 50:
+            current_risk_level = "Medium"
+        else:
+            current_risk_level = "Low"
+    else:
+        current_risk_level = "Low"
+    # ------------------------------------------------
     
     # --- 2. Theme Configuration ---
     theme_color = '#3498db'   
@@ -154,9 +165,8 @@ def generate_medical_pdf(test_result):
                 margin: 1.5cm;
                 margin-bottom: 2.5cm; 
                 
-                /* Define the Static Footer Frame properly inside @page */
                 @frame footer_frame {
-                    -pdf-frame-content: footerContent; /* Matches ID of footer div */
+                    -pdf-frame-content: footerContent; 
                     bottom: 0cm;
                     left: 1.5cm;
                     right: 1.5cm;
@@ -219,7 +229,7 @@ def generate_medical_pdf(test_result):
             .meds-table td { padding: 6px; border: 1px solid #e2e8f0; }
             .dose-badge { background-color: #e2e8f0; color: #334155; padding: 2px 5px; border-radius: 3px; font-size: 8px; font-weight: bold; }
 
-            /* DISCLAIMER (Part of normal flow, above footer) */
+            /* DISCLAIMER */
             .disclaimer-box {
                 margin-top: 30px;
                 text-align: center;
@@ -229,7 +239,7 @@ def generate_medical_pdf(test_result):
                 padding-top: 10px;
             }
 
-            /* FOOTER CONTENT (Hidden in flow, shown in static frame) */
+            /* FOOTER CONTENT */
             #footerContent { 
                 text-align: center; 
                 color: #94a3b8; 
@@ -352,7 +362,7 @@ def generate_medical_pdf(test_result):
         'patient': test_result.patient,
         'result_id': test_result.id,
         'date': test_result.date_tested.strftime('%B %d, %Y'),
-        'risk_level': test_result.risk_level,
+        'risk_level': current_risk_level,  # <--- Using the Recalculated Variable
         'model_conf': model_conf,
         'symptom_score': symptom_score,
         'mean_score': mean_score,

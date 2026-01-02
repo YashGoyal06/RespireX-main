@@ -50,8 +50,13 @@ def predict_xray(image_file):
         # 3. Interpret Results
         if class_idx == 1:
             result = "Positive"  # Tuberculosis detected
-            # Risk Logic: High confidence (>80%) = High Risk
-            risk_level = "High" if confidence > 0.8 else "Low"
+            
+            if confidence > 0.8:
+                risk_level = "High"
+            elif confidence >= 0.5:
+                risk_level = "Medium"
+            else:
+                risk_level = "Low"
         else:
             result = "Negative"  # Normal
             risk_level = "Low"
