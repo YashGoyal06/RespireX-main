@@ -11,7 +11,8 @@ const Navbar = ({
   userType, 
   showBackButton, 
   showCancelButton,
-  onNavigate // Ensure this is passed to handle logo click
+  onNavigate,
+  displayName // <--- ADD THIS PROP
 }) => {
   const DOCTOR_DEFAULT_IMG = "/doctorpfp.jpg"; 
   const PATIENT_MALE_IMG = "/male.jpg";
@@ -20,7 +21,12 @@ const Navbar = ({
 
   // Helper: Get Display Name
   const getDisplayName = () => {
+    if (displayName) return displayName; // <--- ADD THIS: Use custom name if provided
+    
+    // Removed the hardcoded return 'Doctor' to allow fallback to other methods if needed, 
+    // or you can keep it as a fallback:
     if (userType === 'doctor') return 'Doctor';
+    
     if (!user) return 'Guest';
     if (user.user_metadata?.full_name) return user.user_metadata.full_name;
     if (user.email) return user.email.split('@')[0];
