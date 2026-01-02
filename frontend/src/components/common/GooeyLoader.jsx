@@ -1,12 +1,12 @@
 import React from "react";
 
-// Simple utility to merge classes (replaces cn from @/lib/utils if not available)
+// Simple utility to merge classes (no external dependencies needed)
 const cn = (...classes) => classes.filter(Boolean).join(" ");
 
 const GooeyLoader = React.forwardRef(
   ({ className, primaryColor, secondaryColor, borderColor, ...props }, ref) => {
     
-    // configured for Light Blue Shades
+    // Configured for Light Blue Shades
     const style = {
       "--gooey-primary-color": primaryColor || "#60a5fa",    // blue-400
       "--gooey-secondary-color": secondaryColor || "#bae6fd", // sky-200
