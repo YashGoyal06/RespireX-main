@@ -4,6 +4,7 @@ from .serializers import UserProfileSerializer, TestResultSerializer
 from .ml_engine import predict_xray
 from .storage import upload_to_supabase
 import json
+import os # Import OS to read .env
 from rest_framework.permissions import IsAuthenticated
 
 class UserProfileView(views.APIView):
@@ -14,7 +15,28 @@ class UserProfileView(views.APIView):
         data = request.data
         profile, created = UserProfile.objects.get_or_create(user=user)
         
-        profile.role = data.get('role', 'patient')
+        # --- SECURE ACCESS CODE CHECK ---
+        requested_role = data.get('role', 'patient')
+        
+        if requested_role == 'doctor':
+            # 1. Get code sent from frontend
+            provided_code = data.get('access_code')
+            # 2. Get secure code from Backend .env
+            secure_code = os.getenv('DOCTOR_ACCESS_CODE')
+            
+            # 3. Verify
+            if provided_code and provided_code == secure_code:
+                profile.role = 'doctor'
+            else:
+                # Deny request if code matches incorrectly
+                return response.Response(
+                    {"error": "Invalid Access Code. Administrator privileges denied."}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        else:
+            profile.role = requested_role
+        # --------------------------------
+
         profile.state = data.get('state', '')
         profile.city = data.get('city', '')
         profile.age = data.get('age')
@@ -108,7 +130,7 @@ class DoctorDashboardView(views.APIView):
                 "total": queryset.count(),
                 "positive": queryset.filter(result='Positive').count(),
                 "negative": queryset.filter(result='Negative').count(),
-                "underReview": 0  # Can be calculated based on your logic
+                "underReview": 0
             },
             "records": TestResultSerializer(queryset, many=True).data
         })
