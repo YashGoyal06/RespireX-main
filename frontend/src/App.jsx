@@ -15,7 +15,7 @@ import XRayUploadPage from './components/pages/XRayUploadPage';
 import { supabase } from './lib/supabase';
 import api from './lib/api';
 // import { Loader } from 'lucide-react'; // Removed
-import { GooeyLoader } from './components/common/GooeyLoader'; // Added
+import { GooeyLoader } from './components/common/GooeyLoader.jsx'; // Added
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('landing');
