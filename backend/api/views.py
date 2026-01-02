@@ -15,26 +15,36 @@ class UserProfileView(views.APIView):
         data = request.data
         profile, created = UserProfile.objects.get_or_create(user=user)
         
-        # --- SECURE ACCESS CODE CHECK ---
-        requested_role = data.get('role', 'patient')
+        # --- ROBUST ROLE PROTECTION & LOGIC ---
+        # Normalize existing role (handle None or whitespace)
+        current_role = str(profile.role).strip().lower() if profile.role else ""
         
-        if requested_role == 'doctor':
-            # 1. Get code sent from frontend
-            provided_code = data.get('access_code')
-            # 2. Get secure code from Backend .env
-            secure_code = os.getenv('DOCTOR_ACCESS_CODE')
+        # Get requested role from frontend
+        requested_role = data.get('role', 'patient').strip().lower()
+        
+        # CHECK: If user is ALREADY a doctor, we LOCK their role.
+        # This prevents accidental downgrades to 'patient' if the frontend 
+        # sends a default 'patient' role during profile updates.
+        if current_role == 'doctor':
+            pass # Do nothing. Keep them as doctor.
             
-            # 3. Verify
-            if provided_code and provided_code == secure_code:
-                profile.role = 'doctor'
-            else:
-                # Deny request if code matches incorrectly
-                return response.Response(
-                    {"error": "Invalid Access Code. Administrator privileges denied."}, 
-                    status=status.HTTP_403_FORBIDDEN
-                )
         else:
-            profile.role = requested_role
+            # Only allow role change if they are NOT currently a doctor
+            if requested_role == 'doctor':
+                # Verify Access Code to BECOME a doctor
+                provided_code = data.get('access_code')
+                secure_code = os.getenv('DOCTOR_ACCESS_CODE')
+                
+                if provided_code and provided_code == secure_code:
+                    profile.role = 'doctor'
+                else:
+                    return response.Response(
+                        {"error": "Invalid Access Code. Administrator privileges denied."}, 
+                        status=status.HTTP_403_FORBIDDEN
+                    )
+            else:
+                # Default to patient
+                profile.role = 'patient'
         # --------------------------------
 
         profile.state = data.get('state', '')
@@ -130,7 +140,8 @@ class DoctorDashboardView(views.APIView):
                 "total": queryset.count(),
                 "positive": queryset.filter(result='Positive').count(),
                 "negative": queryset.filter(result='Negative').count(),
-                "underReview": 0
+                # Removed 'underReview' from here to keep data clean, though frontend ignores it now
+                "underReview": 0 
             },
             "records": TestResultSerializer(queryset, many=True).data
         })
