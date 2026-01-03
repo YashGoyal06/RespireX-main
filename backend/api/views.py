@@ -10,7 +10,7 @@ from .models import UserProfile, TestResult
 from .serializers import UserProfileSerializer, TestResultSerializer
 from .ml_engine import predict_xray
 from .storage import upload_to_supabase
-from .pdf_generator import generate_medical_pdf  # Ensure you created this file as discussed
+from .pdf_generator import generate_medical_pdf 
 
 class UserProfileView(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -125,6 +125,7 @@ class DoctorDashboardView(views.APIView):
             queryset = queryset.filter(patient__state__iexact=state_filter)
             
         return response.Response({
+            "doctor_name": profile.full_name, # Added doctor_name to response
             "stats": {
                 "total": queryset.count(),
                 "positive": queryset.filter(result='Positive').count(),
@@ -155,5 +156,5 @@ class DownloadReportView(views.APIView):
             return response
             
         except Exception as e:
-                print(f"Error generating PDF: {e}") # Ensure the error is logged
+                print(f"Error generating PDF: {e}") 
                 return Response({"error": "Failed to generate report"}, status=500)
