@@ -18,28 +18,18 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     'Tamil Nadu', 'Uttar Pradesh', 'West Bengal'
   ];
 
-  // Fetch Doctor Profile (Name)
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await api.get('/profile/');
-        if (response.data.full_name) {
-          setDoctorName(response.data.full_name);
-        }
-      } catch (err) {
-        console.error("Failed to fetch doctor profile:", err);
-      }
-    };
-    fetchProfile();
-  }, []);
-
-  // Fetch Dashboard Data
+  // Fetch Dashboard Data (including Doctor Name)
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
         const response = await api.get(`/doctor/dashboard/?state=${selectedState === 'All States' ? 'all' : selectedState}`);
         setStats(response.data.stats);
+        
+        // Set Doctor Name from the response
+        if (response.data.doctor_name) {
+          setDoctorName(response.data.doctor_name);
+        }
         
         const mappedPatients = response.data.records.map(record => {
           // --- UPDATED RISK LOGIC FOR DISPLAY ---
