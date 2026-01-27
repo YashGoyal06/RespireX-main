@@ -198,6 +198,7 @@ class DownloadReportView(views.APIView):
             
         except Exception as e:
                 print(f"Error generating PDF: {e}") 
+                print(f"Error generating PDF: {e}") 
                 return Response({"error": "Failed to generate report"}, status=500)
 
 class PublicStatsView(views.APIView):
