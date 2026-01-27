@@ -5,15 +5,12 @@ import Footer from '../common/Footer';
 import api from '../../lib/api'; 
 
 const LandingPage = ({ onNavigate, user, onLogout }) => {
-  // 🆕 Initialize as null to distinguish between "loading" and "0"
   const [totalTests, setTotalTests] = useState(null);
 
   useEffect(() => {
-    // 🆕 Fetch stats independently of User Auth
     const fetchStats = async () => {
       try {
         console.log("📊 Fetching public stats...");
-        // Ensure your backend allows this endpoint to be public!
         const response = await api.get('/stats/'); 
         const count = response.data.total_tests || 0;
         console.log("✅ Stats received:", count);
@@ -97,29 +94,11 @@ const LandingPage = ({ onNavigate, user, onLogout }) => {
 
               <div className="space-y-6">
                 {[
-                  { 
-                    icon: Zap, 
-                    title: "AI-Powered Analysis", 
-                    desc: "Advanced machine learning algorithms for accurate tuberculosis detection", 
-                    gradient: "from-blue-500 to-blue-600" 
-                  },
-                  { 
-                    icon: TrendingUp, 
-                    title: "Quick Screening", 
-                    desc: "Get preliminary results within minutes with simple symptom assessment", 
-                    gradient: "from-cyan-500 to-cyan-600" 
-                  },
-                  { 
-                    icon: Shield, 
-                    title: "Secure & Private", 
-                    desc: "Your health data encrypted and protected with strict privacy measures", 
-                    gradient: "from-indigo-500 to-indigo-600" 
-                  }
+                  { icon: Zap, title: "AI-Powered Analysis", desc: "Advanced machine learning algorithms for accurate tuberculosis detection", gradient: "from-blue-500 to-blue-600" },
+                  { icon: TrendingUp, title: "Quick Screening", desc: "Get preliminary results within minutes with simple symptom assessment", gradient: "from-cyan-500 to-cyan-600" },
+                  { icon: Shield, title: "Secure & Private", desc: "Your health data encrypted and protected with strict privacy measures", gradient: "from-indigo-500 to-indigo-600" }
                 ].map((feature, idx) => (
-                  <div 
-                    key={idx} 
-                    className={`bg-slate-50 p-6 rounded-2xl border border-gray-100 hover-lift animate-fade-in stagger-${idx + 1} shadow-sm hover:shadow-md transition-all duration-300 flex items-start space-x-4`}
-                  >
+                  <div key={idx} className={`bg-slate-50 p-6 rounded-2xl border border-gray-100 hover-lift animate-fade-in stagger-${idx + 1} shadow-sm hover:shadow-md transition-all duration-300 flex items-start space-x-4`}>
                     <div className={`shrink-0 w-12 h-12 bg-gradient-to-br ${feature.gradient} rounded-xl flex items-center justify-center shadow-lg`}>
                       <feature.icon className="w-6 h-6 text-white" strokeWidth={2} />
                     </div>
@@ -150,14 +129,12 @@ const LandingPage = ({ onNavigate, user, onLogout }) => {
         </div>
       </div>
 
-      {/* Stats Section - Updated */}
+      {/* Stats Section */}
       <div className="py-20 bg-gradient-to-br from-gray-50 to-blue-50">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8 text-center">
             
-            {/* 1. Tests Completed (Real Data) */}
             <div className="animate-fade-in stagger-1">
-              {/* Display Logic: If > 0, show number. If 0 or null, show message. */}
               <div className={`font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2 ${
                 totalTests > 0 ? 'text-5xl' : 'text-3xl lg:text-4xl'
               }`}>
@@ -166,7 +143,6 @@ const LandingPage = ({ onNavigate, user, onLogout }) => {
               <div className="text-gray-600 font-medium">Tests Completed</div>
             </div>
 
-            {/* 2. Static Stats */}
             <div className="animate-fade-in stagger-2">
               <div className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent mb-2">
                 98%
