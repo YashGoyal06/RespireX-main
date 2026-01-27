@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
-import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Activity, Loader } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Activity, Loader, Mail } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import api from '../../lib/api';
 
 const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers }) => {
   const [downloading, setDownloading] = useState(false);
+  const [emailing, setEmailing] = useState(false); // State for email loading
 
-  // --- FIX: Robust ID Extraction ---
-  // If coming from Upload Page, data is in resultData.result.id
-  // If coming from History Page (future proofing), it might be resultData.id
   const result = resultData?.result || resultData || {};
   const resultId = result.id; 
-  // --------------------------------
-
+  
   const xrayImage = resultData?.xray_image_url || resultData?.originalImage || null;
   
   const detected = result.result === 'Positive';
@@ -25,13 +22,11 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
 
   const calculateScores = () => {
     let symptomScore = 0;
-    // 1. Try to use backend data if available (History view)
     if (result.symptoms_data) {
         const answers = Object.values(result.symptoms_data);
         const yesCount = answers.filter(a => typeof a === 'string' && a.toLowerCase() === 'yes').length;
         symptomScore = (yesCount / 8) * 100;
     } 
-    // 2. Fallback to local state (Upload view)
     else if (symptomAnswers) {
       const answers = Object.values(symptomAnswers);
       const yesCount = answers.filter(a => a === 'Yes').length;
@@ -73,7 +68,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
 
   const handleDownload = async () => {
     if (!resultId) {
-        console.error("Debug Info:", resultData); // For debugging
         alert("Report ID missing. Cannot download.");
         return;
     }
@@ -101,6 +95,26 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
     }
   };
 
+  // --- Email Handler ---
+  const handleEmailReport = async () => {
+    if (!resultId) {
+      alert("Report ID missing. Cannot send email.");
+      return;
+    }
+    try {
+      setEmailing(true);
+      // NOTE: Using POST to match standard backend action behavior. 
+      // Ensure your backend view (EmailReportView) accepts POST requests.
+      await api.post(`/email-report/${resultId}/`);
+      alert("Success! The report has been emailed to you.");
+    } catch (error) {
+      console.error("Email failed:", error);
+      alert("Failed to send email. Please try again.");
+    } finally {
+      setEmailing(false);
+    }
+  };
+
   const handleShare = () => {
     if (navigator.share) {
       navigator.share({
@@ -125,7 +139,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
 
       <div className="pt-32 pb-20 px-6">
         <div className="max-w-5xl mx-auto">
-          {/* Header */}
           <div className="text-center mb-12 animate-fade-in">
             <div className={`inline-block px-4 py-2 rounded-full mb-6 ${
               detected ? 'bg-orange-50' : 'bg-green-50'
@@ -140,7 +153,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
             <p className="text-xl text-gray-600">Completed on {uploadDate}</p>
           </div>
 
-          {/* Main Result Card */}
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 mb-8 text-center animate-scale">
             {!detected ? (
               <>
@@ -191,27 +203,46 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
               </div>
             </div>
 
+            {/* ACTION BUTTONS ROW */}
             <div className="flex space-x-4 justify-center">
+              
               <button 
                 onClick={handleDownload}
                 disabled={downloading}
-                className="flex items-center space-x-2 px-8 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold shadow-lg disabled:opacity-50"
+                className="flex items-center space-x-2 px-6 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold shadow-lg disabled:opacity-50"
               >
                 {downloading ? (
                     <Loader className="w-5 h-5 animate-spin" />
                 ) : (
                     <Download className="w-5 h-5" />
                 )}
-                <span>{downloading ? 'Generating PDF...' : 'Download Report'}</span>
+                <span>{downloading ? 'Downloading...' : 'Download PDF'}</span>
               </button>
+
+              {/* --- EMAIL BUTTON --- */}
+              <button 
+                onClick={handleEmailReport}
+                disabled={emailing}
+                className="flex items-center space-x-2 px-6 py-4 bg-white text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-50 transition font-semibold shadow-lg disabled:opacity-50"
+              >
+                {emailing ? (
+                    <Loader className="w-5 h-5 animate-spin text-blue-600" />
+                ) : (
+                    <Mail className="w-5 h-5 text-blue-600" />
+                )}
+                <span>{emailing ? 'Sending...' : 'Email Report'}</span>
+              </button>
+              {/* ------------------- */}
+
               <button 
                 onClick={handleShare}
-                className="flex items-center space-x-2 px-8 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold shadow-lg"
+                className="flex items-center space-x-2 px-6 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold shadow-lg"
               >
                 <Share2 className="w-5 h-5" />
-                <span>Share Results</span>
+                <span>Share</span>
               </button>
             </div>
+
           </div>
 
           {xrayImage && (
@@ -227,7 +258,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
             </div>
           )}
 
-          {/* Recommendations & Meds Grid */}
           <div className="grid md:grid-cols-2 gap-8 mb-8">
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 animate-fade-in stagger-2">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">

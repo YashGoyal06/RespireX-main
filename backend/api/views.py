@@ -1,5 +1,5 @@
 from rest_framework import views, response, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 import json
@@ -10,7 +10,8 @@ from .models import UserProfile, TestResult
 from .serializers import UserProfileSerializer, TestResultSerializer
 from .ml_engine import predict_xray
 from .storage import upload_to_supabase
-from .pdf_generator import generate_medical_pdf  # Ensure you created this file as discussed
+from .pdf_generator import generate_medical_pdf 
+from .email_utils import send_html_email, get_medical_email_template
 
 class UserProfileView(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -20,7 +21,6 @@ class UserProfileView(views.APIView):
         data = request.data
         profile, created = UserProfile.objects.get_or_create(user=user)
         
-        # --- ROBUST ROLE PROTECTION & LOGIC ---
         current_role = str(profile.role).strip().lower() if profile.role else ""
         requested_role = data.get('role', 'patient').strip().lower()
         
@@ -40,7 +40,6 @@ class UserProfileView(views.APIView):
                     )
             else:
                 profile.role = 'patient'
-        # --------------------------------
 
         profile.state = data.get('state', '')
         profile.city = data.get('city', '')
@@ -84,6 +83,7 @@ class PredictionView(views.APIView):
         image_file.seek(0)
         result, confidence, risk_level = predict_xray(image_file)
         
+        # --- REVERTED: Just create the record, no email logic here ---
         test_record = TestResult.objects.create(
             patient=user_profile,
             xray_image_url=image_url,
@@ -92,7 +92,50 @@ class PredictionView(views.APIView):
             risk_level=risk_level,
             symptoms_data=json.loads(symptoms) if isinstance(symptoms, str) else symptoms
         )
+        
         return response.Response(TestResultSerializer(test_record).data)
+
+class EmailReportView(views.APIView):
+    """
+    Dedicated Endpoint for Sending Emails (Logic from app.py)
+    """
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            if hasattr(request.user, 'profile') and request.user.profile.role == 'doctor':
+                test_result = get_object_or_404(TestResult, pk=pk)
+            else:
+                test_result = get_object_or_404(TestResult, pk=pk, patient__user=request.user)
+            
+            # Generate PDF
+            pdf_buffer = generate_medical_pdf(test_result)
+            
+            # Prepare Email Content
+            patient_name = test_result.patient.full_name or request.user.username
+            date_str = test_result.date_tested.strftime('%B %d, %Y')
+            
+            html_body = get_medical_email_template(
+                patient_name=patient_name,
+                test_date=date_str,
+                risk_level=test_result.risk_level,
+                confidence=round(test_result.confidence_score, 1)
+            )
+
+            # Send Email
+            send_html_email(
+                subject=f"RespireX Screening Report - {date_str}",
+                recipient_list=[request.user.email],
+                html_content=html_body,
+                pdf_buffer=pdf_buffer,
+                filename=f"RespireX_Report_{test_result.id}.pdf"
+            )
+
+            return response.Response({"message": "Email sent successfully"})
+
+        except Exception as e:
+            print(f"Email Error: {e}")
+            return response.Response({"error": "Failed to send email"}, status=500)
 
 class PatientHistoryView(views.APIView):
     permission_classes = [IsAuthenticated]
@@ -125,6 +168,7 @@ class DoctorDashboardView(views.APIView):
             queryset = queryset.filter(patient__state__iexact=state_filter)
             
         return response.Response({
+            "doctor_name": profile.full_name,
             "stats": {
                 "total": queryset.count(),
                 "positive": queryset.filter(result='Positive').count(),
@@ -139,7 +183,6 @@ class DownloadReportView(views.APIView):
 
     def get(self, request, pk):
         try:
-            # Check permissions: Doctors can see all, Patients only their own
             if hasattr(request.user, 'profile') and request.user.profile.role == 'doctor':
                 test_result = get_object_or_404(TestResult, pk=pk)
             else:
@@ -147,7 +190,6 @@ class DownloadReportView(views.APIView):
                 
             pdf_buffer = generate_medical_pdf(test_result)
             
-            # Return the PDF as a binary blob
             filename = f"RespireX_Report_{test_result.id}.pdf"
             response = HttpResponse(pdf_buffer, content_type='application/pdf')
             response['Content-Disposition'] = f'attachment; filename="{filename}"'
@@ -155,5 +197,12 @@ class DownloadReportView(views.APIView):
             return response
             
         except Exception as e:
-                print(f"Error generating PDF: {e}") # Ensure the error is logged
+                print(f"Error generating PDF: {e}") 
                 return Response({"error": "Failed to generate report"}, status=500)
+
+class PublicStatsView(views.APIView):
+    permission_classes = [AllowAny] 
+
+    def get(self, request):
+        total_count = TestResult.objects.count()
+        return response.Response({"total_tests": total_count})
