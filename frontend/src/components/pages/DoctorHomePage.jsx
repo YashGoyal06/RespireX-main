@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail, Calendar, Clock, MessageSquare, ClipboardList, Stethoscope } from 'lucide-react';
+import { Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail, Calendar, Clock, MessageSquare, ClipboardList } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 import api from '../../lib/api';
 
-// --- SUB-COMPONENTS MOVED OUTSIDE TO PREVENT RE-RENDER GLITCHES ---
+// --- SUB-COMPONENTS ---
 
 const PatientDetailsModal = ({ patient, onClose }) => {
   const [downloading, setDownloading] = useState(false);
@@ -70,7 +70,7 @@ const RescheduleModal = ({ show, onClose, onSubmit, note, setNote, newDate, setN
             <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale">
                 <h3 className="text-xl font-bold text-gray-900 mb-4">Update Appointment</h3>
                 
-                {/* Date/Time Picker */}
+                {/* Date Picker */}
                 <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">New Date & Time (Optional)</label>
                     <input 
@@ -79,7 +79,7 @@ const RescheduleModal = ({ show, onClose, onSubmit, note, setNote, newDate, setN
                         value={newDate}
                         onChange={(e) => setNewDate(e.target.value)}
                     />
-                    <p className="text-xs text-gray-500 mt-1">Leave blank to keep the current time.</p>
+                    <p className="text-xs text-gray-500 mt-1">Leave blank to keep current time.</p>
                 </div>
 
                 {/* Comment Box */}
@@ -88,7 +88,7 @@ const RescheduleModal = ({ show, onClose, onSubmit, note, setNote, newDate, setN
                     <textarea 
                         className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                         rows="3"
-                        placeholder="e.g., Rescheduled due to conflict. Please confirm."
+                        placeholder="e.g., I am unavailable at this time. Please book a slot after 2 PM."
                         value={note}
                         onChange={(e) => setNote(e.target.value)}
                     ></textarea>
@@ -107,18 +107,18 @@ const RescheduleModal = ({ show, onClose, onSubmit, note, setNote, newDate, setN
 
 const DoctorHomePage = ({ onNavigate, onLogout, user }) => { 
   const [activeTab, setActiveTab] = useState('records'); 
-  
   const [selectedState, setSelectedState] = useState('all');
   const [stats, setStats] = useState({ total: 0, positive: 0, negative: 0, underReview: 0 });
   const [patients, setPatients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [doctorName, setDoctorName] = useState('');
-
+  
+  // Appointment States
   const [appointments, setAppointments] = useState([]);
   const [apptLoading, setApptLoading] = useState(false);
   
-  // Modal State
+  // Reschedule Modal State
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedApptId, setSelectedApptId] = useState(null);
   const [rescheduleNote, setRescheduleNote] = useState("");
@@ -140,6 +140,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     fetchProfile();
   }, []);
 
+  // Fetch Stats/Patients
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -186,6 +187,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     fetchData();
   }, [selectedState]);
 
+  // Fetch Appointments
   useEffect(() => {
     if (activeTab === 'appointments') {
       fetchAppointments();
@@ -225,7 +227,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const submitReschedule = async () => {
     try {
       await api.patch(`/appointments/${selectedApptId}/status/`, { 
-        status: 'cancelled', // Or 'rescheduled' if you prefer, but we use cancelled/needs action for now
+        status: 'pending', // <--- CHANGED FROM 'cancelled' TO 'pending' TO KEEP ACTIVE
         doctor_note: rescheduleNote,
         new_date_time: newDateTime || null 
       });
@@ -282,6 +284,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
 
           {activeTab === 'records' && (
              <div className="animate-fade-in">
+                {/* Patient Records Section */}
                 <div className="grid md:grid-cols-3 gap-6 mb-8">
                     {[
                     { icon: Users, label: "Total Patients", value: stats.total || 0, gradient: "from-blue-500 to-blue-600" },
@@ -378,7 +381,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                                                           "{appt.reason}"
                                                       </div>
                                                   )}
-                                                  {/* Display Doctor Note if Exists */}
                                                   {appt.doctor_note && (
                                                       <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
                                                           <strong>Your Note:</strong> {appt.doctor_note}
@@ -396,15 +398,18 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                                                   {appt.status}
                                               </span>
 
-                                              {appt.status === 'pending' && (
+                                              {/* Allow Update Button for Pending AND Confirmed (if needed) */}
+                                              {(appt.status === 'pending' || appt.status === 'confirmed') && (
                                                   <div className="flex items-center space-x-2 mt-2">
-                                                      <button 
-                                                          onClick={() => handleApproveAppointment(appt.id)}
-                                                          className="flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 shadow-sm transition"
-                                                      >
-                                                          <CheckCircle className="w-4 h-4 mr-2" />
-                                                          Approve
-                                                      </button>
+                                                      {appt.status === 'pending' && (
+                                                        <button 
+                                                            onClick={() => handleApproveAppointment(appt.id)}
+                                                            className="flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 shadow-sm transition"
+                                                        >
+                                                            <CheckCircle className="w-4 h-4 mr-2" />
+                                                            Approve
+                                                        </button>
+                                                      )}
                                                       <button 
                                                           onClick={() => openRescheduleModal(appt.id)}
                                                           className="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition"
