@@ -1,13 +1,113 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail, Download, Calendar, Clock, MessageSquare, ClipboardList, Stethoscope } from 'lucide-react';
+import { Users, CheckCircle, AlertCircle, User, MapPin, Filter, Loader, X, Phone, Mail, Calendar, Clock, MessageSquare, ClipboardList, Stethoscope } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 import api from '../../lib/api';
 
+// --- SUB-COMPONENTS MOVED OUTSIDE TO PREVENT RE-RENDER GLITCHES ---
+
+const PatientDetailsModal = ({ patient, onClose }) => {
+  const [downloading, setDownloading] = useState(false);
+  if (!patient) return null;
+  const isPositive = patient.result === 'Positive';
+
+  const handleDownloadReport = async () => {
+    setDownloading(true);
+    try {
+      const response = await api.get(`/report/${patient.id}/`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `RespireX_Report_${patient.name.replace(/\s+/g, '_')}_${patient.id}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode.removeChild(link);
+    } catch (err) {
+      alert("Could not download the report.");
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale ring-1 ring-gray-100 relative">
+        <button onClick={onClose} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
+        <div className="p-8">
+           <div className="flex items-center space-x-4 mb-6">
+              <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-2xl font-bold text-blue-600">
+                  {patient.name.charAt(0)}
+              </div>
+              <div>
+                  <h2 className="text-2xl font-bold text-gray-900">{patient.name}</h2>
+                  <p className="text-gray-500">{patient.gender}, {patient.age} years</p>
+              </div>
+           </div>
+           <div className="space-y-3 mb-6">
+              <div className="flex items-center text-gray-600"><Phone className="w-4 h-4 mr-2"/> {patient.phone}</div>
+              <div className="flex items-center text-gray-600"><Mail className="w-4 h-4 mr-2"/> {patient.email}</div>
+              <div className="flex items-center text-gray-600"><MapPin className="w-4 h-4 mr-2"/> {patient.city}, {patient.state}</div>
+           </div>
+           <div className={`p-4 rounded-xl border ${isPositive ? 'bg-orange-50 border-orange-100' : 'bg-green-50 border-green-100'} flex justify-between items-center`}>
+              <div>
+                  <p className={`font-bold ${isPositive ? 'text-orange-800' : 'text-green-800'}`}>Result: {patient.result}</p>
+                  <p className="text-sm text-gray-600">Confidence: {patient.confidence}%</p>
+              </div>
+              <button onClick={handleDownloadReport} disabled={downloading} className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800">
+                  {downloading ? 'Downloading...' : 'Download Report'}
+              </button>
+           </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const RescheduleModal = ({ show, onClose, onSubmit, note, setNote, newDate, setNewDate }) => {
+    if (!show) return null;
+    return (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
+            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">Update Appointment</h3>
+                
+                {/* Date/Time Picker */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">New Date & Time (Optional)</label>
+                    <input 
+                        type="datetime-local" 
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        value={newDate}
+                        onChange={(e) => setNewDate(e.target.value)}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">Leave blank to keep the current time.</p>
+                </div>
+
+                {/* Comment Box */}
+                <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Message / Comment</label>
+                    <textarea 
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        rows="3"
+                        placeholder="e.g., Rescheduled due to conflict. Please confirm."
+                        value={note}
+                        onChange={(e) => setNote(e.target.value)}
+                    ></textarea>
+                </div>
+
+                <div className="flex justify-end space-x-3">
+                    <button onClick={onClose} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
+                    <button onClick={onSubmit} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Update & Notify</button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// --- MAIN COMPONENT ---
+
 const DoctorHomePage = ({ onNavigate, onLogout, user }) => { 
-  const [activeTab, setActiveTab] = useState('records'); // 'records' or 'appointments'
+  const [activeTab, setActiveTab] = useState('records'); 
   
-  // Dashboard Data
   const [selectedState, setSelectedState] = useState('all');
   const [stats, setStats] = useState({ total: 0, positive: 0, negative: 0, underReview: 0 });
   const [patients, setPatients] = useState([]);
@@ -15,12 +115,14 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [doctorName, setDoctorName] = useState('');
 
-  // Appointment Data
   const [appointments, setAppointments] = useState([]);
   const [apptLoading, setApptLoading] = useState(false);
+  
+  // Modal State
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedApptId, setSelectedApptId] = useState(null);
   const [rescheduleNote, setRescheduleNote] = useState("");
+  const [newDateTime, setNewDateTime] = useState("");
 
   const states = [
     'All States', 'Andhra Pradesh', 'Bihar', 'Gujarat', 'Karnataka', 
@@ -38,7 +140,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     fetchProfile();
   }, []);
 
-  // Fetch Patient Records (Stats)
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -85,7 +186,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     fetchData();
   }, [selectedState]);
 
-  // Fetch Appointments
   useEffect(() => {
     if (activeTab === 'appointments') {
       fetchAppointments();
@@ -105,10 +205,10 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   };
 
   const handleApproveAppointment = async (id) => {
-    if(!window.confirm("Confirm this appointment? An email will be sent to the patient.")) return;
+    if(!window.confirm("Confirm this appointment?")) return;
     try {
       await api.patch(`/appointments/${id}/status/`, { status: 'confirmed' });
-      alert("Appointment Confirmed! Email sent.");
+      alert("Appointment Confirmed!");
       fetchAppointments();
     } catch (err) {
       alert("Error confirming appointment.");
@@ -118,15 +218,16 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const openRescheduleModal = (id) => {
     setSelectedApptId(id);
     setRescheduleNote("");
+    setNewDateTime("");
     setShowRescheduleModal(true);
   };
 
   const submitReschedule = async () => {
     try {
-      // We use 'cancelled' status but send the note so patient knows to re-book
       await api.patch(`/appointments/${selectedApptId}/status/`, { 
-        status: 'cancelled',
-        doctor_note: rescheduleNote 
+        status: 'cancelled', // Or 'rescheduled' if you prefer, but we use cancelled/needs action for now
+        doctor_note: rescheduleNote,
+        new_date_time: newDateTime || null 
       });
       alert("Update sent to patient successfully.");
       setShowRescheduleModal(false);
@@ -136,108 +237,31 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
     }
   };
 
-  // --- SUB-COMPONENTS ---
-
-  const PatientDetailsModal = ({ patient, onClose }) => {
-    const [downloading, setDownloading] = useState(false);
-    if (!patient) return null;
-    const isPositive = patient.result === 'Positive';
-
-    const handleDownloadReport = async () => {
-      setDownloading(true);
-      try {
-        const response = await api.get(`/report/${patient.id}/`, { responseType: 'blob' });
-        const url = window.URL.createObjectURL(new Blob([response.data]));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', `RespireX_Report_${patient.name.replace(/\s+/g, '_')}_${patient.id}.pdf`);
-        document.body.appendChild(link);
-        link.click();
-        link.parentNode.removeChild(link);
-      } catch (err) {
-        alert("Could not download the report.");
-      } finally {
-        setDownloading(false);
-      }
-    };
-
-    return (
-      <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-gray-900/40 backdrop-blur-sm animate-fade-in">
-        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden animate-scale ring-1 ring-gray-100 relative">
-          <button onClick={onClose} className="absolute top-4 right-4 p-2 text-gray-400 hover:text-gray-900 bg-gray-100 rounded-full"><X className="w-5 h-5" /></button>
-          <div className="p-8">
-             <div className="flex items-center space-x-4 mb-6">
-                <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-2xl font-bold text-blue-600">
-                    {patient.name.charAt(0)}
-                </div>
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900">{patient.name}</h2>
-                    <p className="text-gray-500">{patient.gender}, {patient.age} years</p>
-                </div>
-             </div>
-             <div className="space-y-3 mb-6">
-                <div className="flex items-center text-gray-600"><Phone className="w-4 h-4 mr-2"/> {patient.phone}</div>
-                <div className="flex items-center text-gray-600"><Mail className="w-4 h-4 mr-2"/> {patient.email}</div>
-                <div className="flex items-center text-gray-600"><MapPin className="w-4 h-4 mr-2"/> {patient.city}, {patient.state}</div>
-             </div>
-             <div className={`p-4 rounded-xl border ${isPositive ? 'bg-orange-50 border-orange-100' : 'bg-green-50 border-green-100'} flex justify-between items-center`}>
-                <div>
-                    <p className={`font-bold ${isPositive ? 'text-orange-800' : 'text-green-800'}`}>Result: {patient.result}</p>
-                    <p className="text-sm text-gray-600">Confidence: {patient.confidence}%</p>
-                </div>
-                <button onClick={handleDownloadReport} disabled={downloading} className="px-4 py-2 bg-gray-900 text-white rounded-lg text-sm hover:bg-gray-800">
-                    {downloading ? 'Downloading...' : 'Download Report'}
-                </button>
-             </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
-  const RescheduleModal = () => {
-      if (!showRescheduleModal) return null;
-      return (
-          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-gray-900/50 backdrop-blur-sm">
-              <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Reschedule / Add Comment</h3>
-                  <p className="text-sm text-gray-500 mb-4">
-                      Add a note for the patient. This will update the status to "Needs Rescheduling" (Cancelled) and email the patient your message.
-                  </p>
-                  <textarea 
-                      className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
-                      rows="4"
-                      placeholder="e.g., I am unavailable at this time. Please book a slot after 2 PM."
-                      value={rescheduleNote}
-                      onChange={(e) => setRescheduleNote(e.target.value)}
-                  ></textarea>
-                  <div className="flex justify-end space-x-3">
-                      <button onClick={() => setShowRescheduleModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                      <button onClick={submitReschedule} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Send Update</button>
-                  </div>
-              </div>
-          </div>
-      );
-  };
-
-  // --- MAIN RENDER ---
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50 flex flex-col">
       <Navbar onLogout={onLogout} userType="doctor" user={user} isLoggedIn={true} onNavigate={onNavigate} displayName={doctorName ? `Dr. ${doctorName}` : 'Doctor'} />
+      
       {selectedPatient && <PatientDetailsModal patient={selectedPatient} onClose={() => setSelectedPatient(null)} />}
-      <RescheduleModal />
+      
+      <RescheduleModal 
+          show={showRescheduleModal}
+          onClose={() => setShowRescheduleModal(false)}
+          onSubmit={submitReschedule}
+          note={rescheduleNote}
+          setNote={setRescheduleNote}
+          newDate={newDateTime}
+          setNewDate={setNewDateTime}
+      />
 
       <div className="flex-grow pt-32 pb-20 px-6 lg:px-8">
         <div className="max-w-7xl mx-auto">
           
-          {/* Header & Tabs */}
           <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 animate-fade-in">
             <div>
                 <h1 className="text-4xl font-bold text-gray-900">{doctorName ? `Dr. ${doctorName}` : 'Doctor Dashboard'}</h1>
                 <p className="text-gray-600 mt-1">Manage patient records and appointments</p>
             </div>
             
-            {/* Tab Switcher */}
             <div className="mt-4 md:mt-0 bg-white p-1 rounded-xl border border-gray-200 shadow-sm inline-flex">
                 <button 
                     onClick={() => setActiveTab('records')}
@@ -256,10 +280,8 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
             </div>
           </div>
 
-          {/* === TAB 1: PATIENT RECORDS === */}
           {activeTab === 'records' && (
              <div className="animate-fade-in">
-                {/* Stats */}
                 <div className="grid md:grid-cols-3 gap-6 mb-8">
                     {[
                     { icon: Users, label: "Total Patients", value: stats.total || 0, gradient: "from-blue-500 to-blue-600" },
@@ -278,7 +300,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                     ))}
                 </div>
 
-                {/* Filters */}
                 <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 mb-6 flex items-center space-x-4">
                     <Filter className="w-5 h-5 text-gray-400" />
                     <select value={selectedState} onChange={(e) => setSelectedState(e.target.value)} className="flex-1 border-none bg-transparent font-medium text-gray-700 focus:ring-0 cursor-pointer outline-none">
@@ -286,7 +307,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                     </select>
                 </div>
 
-                {/* List */}
                 <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden">
                     {loading ? (
                         <div className="p-12 text-center text-gray-500"><Loader className="w-8 h-8 animate-spin mx-auto mb-2"/>Loading data...</div>
@@ -319,7 +339,6 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
              </div>
           )}
 
-          {/* === TAB 2: APPOINTMENTS === */}
           {activeTab === 'appointments' && (
               <div className="animate-fade-in">
                   <div className="bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden min-h-[400px]">
@@ -359,6 +378,12 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                                                           "{appt.reason}"
                                                       </div>
                                                   )}
+                                                  {/* Display Doctor Note if Exists */}
+                                                  {appt.doctor_note && (
+                                                      <div className="mt-2 text-sm text-blue-600 bg-blue-50 p-2 rounded border border-blue-100">
+                                                          <strong>Your Note:</strong> {appt.doctor_note}
+                                                      </div>
+                                                  )}
                                               </div>
                                           </div>
 
@@ -385,7 +410,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                                                           className="flex items-center px-4 py-2 bg-white border border-gray-300 text-gray-700 text-sm font-medium rounded-lg hover:bg-gray-50 transition"
                                                       >
                                                           <MessageSquare className="w-4 h-4 mr-2" />
-                                                          Comment/Change
+                                                          Comment/Update
                                                       </button>
                                                   </div>
                                               )}
