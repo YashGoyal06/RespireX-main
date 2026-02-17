@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Clock, Shield, Zap, ChevronRight, Activity } from 'lucide-react';
+import { FileText, Clock, Shield, Zap, ChevronRight, Activity, Stethoscope } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
@@ -12,7 +12,6 @@ const PatientHomePage = ({ onNavigate, onLogout, user }) => {
         userType="patient" 
         isLoggedIn={true}
         user={user}
-        // ADDED: Pass onNavigate so the Logo click works
         onNavigate={onNavigate} 
       />
 
@@ -25,7 +24,9 @@ const PatientHomePage = ({ onNavigate, onLogout, user }) => {
             <p className="text-xl text-gray-600">Ready to start your TB screening test?</p>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-8 mb-12">
+          {/* Main Action Grid (TB Test & History) */}
+          <div className="grid lg:grid-cols-2 gap-8 mb-8">
+            {/* Quick TB Test Card */}
             <div className="group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-1">
               <div className="flex items-center space-x-4 mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -45,6 +46,7 @@ const PatientHomePage = ({ onNavigate, onLogout, user }) => {
               </button>
             </div>
 
+            {/* Test History Card */}
             <div className="group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-2">
               <div className="flex items-center space-x-4 mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
@@ -65,6 +67,34 @@ const PatientHomePage = ({ onNavigate, onLogout, user }) => {
             </div>
           </div>
 
+          {/* NEW: Book Appointment Section */}
+          <div className="mb-12 group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-3 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-5">
+                <Stethoscope className="w-64 h-64 text-purple-600" />
+            </div>
+            <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+                <div className="flex-1">
+                    <div className="flex items-center space-x-4 mb-4">
+                        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
+                            <Stethoscope className="w-8 h-8 text-white" strokeWidth={2} />
+                        </div>
+                        <h2 className="text-3xl font-bold text-gray-900">Book Doctor Consultation</h2>
+                    </div>
+                    <p className="text-gray-600 text-lg leading-relaxed max-w-2xl">
+                        Connect with certified specialists for a detailed diagnosis. Schedule an appointment to discuss your screening results and get professional medical advice.
+                    </p>
+                </div>
+                <button
+                    onClick={() => onNavigate('book-appointment')}
+                    className="group/btn whitespace-nowrap px-8 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition font-semibold text-lg shadow-lg hover:shadow-xl flex items-center space-x-2"
+                >
+                    <span>Book Appointment</span>
+                    <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition" />
+                </button>
+            </div>
+          </div>
+
+          {/* Features Grid */}
           <div className="grid md:grid-cols-3 gap-6">
             {[
               {
@@ -88,7 +118,7 @@ const PatientHomePage = ({ onNavigate, onLogout, user }) => {
             ].map((card, idx) => (
               <div 
                 key={idx}
-                className={`bg-white rounded-2xl p-8 border border-gray-100 hover-lift animate-fade-in stagger-${idx + 3} shadow-sm hover:shadow-xl transition-shadow duration-300`}
+                className={`bg-white rounded-2xl p-8 border border-gray-100 hover-lift animate-fade-in stagger-${idx + 4} shadow-sm hover:shadow-xl transition-shadow duration-300`}
               >
                 <div className={`w-14 h-14 bg-gradient-to-br ${card.gradient} rounded-xl flex items-center justify-center mb-6 shadow-lg`}>
                   <card.icon className="w-7 h-7 text-white" strokeWidth={2} />
@@ -99,7 +129,8 @@ const PatientHomePage = ({ onNavigate, onLogout, user }) => {
             ))}
           </div>
 
-          <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-10 text-white animate-fade-in stagger-4">
+          {/* Health Tips */}
+          <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-10 text-white animate-fade-in stagger-5">
             <h3 className="text-3xl font-bold mb-4">Health Tips</h3>
             <ul className="space-y-3 text-lg">
               <li className="flex items-center space-x-3">
