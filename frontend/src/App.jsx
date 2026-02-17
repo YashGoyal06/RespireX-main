@@ -208,7 +208,7 @@ const App = () => {
   }
 
   // Updated exclusion list: Added 'landing' to prevent double navbar
-  const showNavbar = !['landing', 'login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'symptom-test', 'xray-upload', 'test-result'].includes(currentPage);
+  const showNavbar = !['landing', 'login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'symptom-test', 'xray-upload', 'test-result','book-appointment', 'appointments'].includes(currentPage);
   const isUserLoggedIn = !!user;
 
   return (
