@@ -11,6 +11,8 @@ import SymptomTestPage from './components/pages/SymptomTestPage';
 import TestHistoryPage from './components/pages/TestHistoryPage';
 import TestResultPage from './components/pages/TestResultPage';
 import XRayUploadPage from './components/pages/XRayUploadPage';
+import BookAppointmentPage from './components/pages/BookAppointmentPage';
+import AppointmentsPage from './components/pages/AppointmentsPage';
 
 import { supabase } from './lib/supabase';
 import api from './lib/api';
@@ -154,7 +156,10 @@ const App = () => {
       
       case 'test-history': 
         return <TestHistoryPage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
-
+      case 'book-appointment':
+        return <BookAppointmentPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      case 'appointments':
+        return <AppointmentsPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
       case 'symptom-test': 
         return <SymptomTestPage 
           onNavigate={handleNavigate} 
