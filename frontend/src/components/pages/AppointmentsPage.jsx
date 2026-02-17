@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, User, Stethoscope, ArrowLeft } from 'lucide-react';
+import { Calendar, Clock, CheckCircle, XCircle, AlertCircle, User, Stethoscope, ArrowLeft, MessageSquare } from 'lucide-react';
 import api from '../../lib/api';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
@@ -8,7 +8,6 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   
-  // Determine role safely
   const isDoctor = user?.user_metadata?.role === 'doctor' || user?.role === 'doctor';
 
   useEffect(() => {
@@ -29,7 +28,6 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
   const handleStatusUpdate = async (id, status) => {
       try {
           await api.patch(`/appointments/${id}/status/`, { status });
-          // Optimistic update
           setAppointments(prev => prev.map(appt => 
             appt.id === id ? { ...appt, status: status } : appt
           ));
@@ -61,7 +59,6 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
       <div className="flex-grow pt-28 pb-12 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
             
-            {/* Header with Back Button */}
             <div className="flex items-center justify-between mb-8 animate-fade-in">
                 <div>
                     <button 
@@ -80,7 +77,6 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                             : 'Track your upcoming and past visits.'}
                     </p>
                 </div>
-                {/* Add Booking Button for Patients Only */}
                 {!isDoctor && (
                     <button 
                         onClick={() => onNavigate('book-appointment')}
@@ -92,7 +88,6 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                 )}
             </div>
 
-            {/* Content Grid */}
             <div className="grid gap-6">
                 {loading ? (
                     <div className="text-center py-20 text-gray-500">Loading appointments...</div>
@@ -114,7 +109,6 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                         >
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                                 
-                                {/* Info Section */}
                                 <div className="flex items-start space-x-4">
                                     <div className={`p-3 rounded-xl flex-shrink-0 ${isDoctor ? 'bg-purple-100' : 'bg-blue-100'}`}>
                                         {isDoctor ? (
@@ -130,7 +124,6 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                                                 : `Dr. ${appt.doctor_name || "Unknown"}`
                                             }
                                         </h3>
-                                        {/* Shows extra details for doctors */}
                                         {isDoctor && (
                                             <p className="text-sm text-gray-500">{appt.patient_email}</p>
                                         )}
@@ -145,23 +138,30 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                                                 {new Date(appt.date_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
                                             </div>
                                         </div>
-                                        {/* Reason Bubble */}
+                                        
                                         <div className="mt-3 inline-block bg-gray-50 px-3 py-1 rounded-lg text-sm text-gray-600 border border-gray-200">
                                             <span className="font-medium text-gray-700 mr-1">Reason:</span> 
                                             {appt.reason || "No reason provided"}
                                         </div>
+
+                                        {/* SHOW DOCTOR NOTE */}
+                                        {appt.doctor_note && (
+                                            <div className="mt-3 bg-blue-50 border border-blue-100 p-3 rounded-lg text-sm text-blue-800 flex items-start">
+                                                <MessageSquare className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <span className="font-bold">Doctor's Update:</span> {appt.doctor_note}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
 
-                                {/* Status & Actions Section */}
                                 <div className="flex flex-col md:items-end gap-3 min-w-[140px]">
-                                    {/* Status Badge */}
                                     <span className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide border ${getStatusColor(appt.status)}`}>
                                         {getStatusIcon(appt.status)}
                                         {appt.status}
                                     </span>
 
-                                    {/* Doctor Actions */}
                                     {isDoctor && appt.status === 'pending' && (
                                         <div className="flex items-center space-x-2 mt-2 w-full">
                                             <button 
