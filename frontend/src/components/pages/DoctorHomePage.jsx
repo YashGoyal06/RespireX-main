@@ -21,7 +21,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedApptId, setSelectedApptId] = useState(null);
   const [rescheduleNote, setRescheduleNote] = useState("");
-  const [rescheduleDate, setRescheduleDate] = useState(""); // New state for date picker
+  const [rescheduleDate, setRescheduleDate] = useState(""); 
 
   const states = [
     'All States', 'Andhra Pradesh', 'Bihar', 'Gujarat', 'Karnataka', 
@@ -119,21 +119,20 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const openRescheduleModal = (id) => {
     setSelectedApptId(id);
     setRescheduleNote("");
-    setRescheduleDate(""); // Reset date on open
+    setRescheduleDate(""); 
     setShowRescheduleModal(true);
   };
 
   const submitReschedule = async () => {
     try {
+      // FIX: Use standard field names that match the Database/Serializer
       const payload = { 
         doctor_note: rescheduleNote 
       };
 
-      // If a date is picked, we CONFIRM the move. 
-      // If no date is picked, we CANCEL and ask them to rebook.
       if (rescheduleDate) {
         payload.status = 'confirmed';
-        payload.new_date_time = rescheduleDate;
+        payload.date_time = rescheduleDate; // Changed from new_date_time to date_time
       } else {
         payload.status = 'cancelled';
       }
@@ -144,7 +143,8 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
       setShowRescheduleModal(false);
       fetchAppointments();
     } catch (err) {
-      alert("Error updating appointment.");
+      console.error(err);
+      alert("Error updating appointment. Please check your connection.");
     }
   };
 
@@ -217,7 +217,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
                       Select a new date to automatically update and confirm the appointment, or just add a note to cancel and request re-booking.
                   </p>
                   
-                  {/* DATE PICKER ADDED HERE */}
+                  {/* DATE PICKER */}
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">New Date & Time (Optional)</label>
                     <input 
