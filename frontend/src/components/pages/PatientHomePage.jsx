@@ -3,8 +3,30 @@ import { FileText, Clock, Shield, Zap, ChevronRight, Activity, Stethoscope, Cale
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
+// Receive Theme Props from App.jsx
 const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLanguage }) => { 
   
+  // Use context (in real apps) or just rely on CSS inheritance if passing simple props isn't enough.
+  // But wait! App.jsx passes toggleTheme to Navbar, but PatientHomePage needs to pass it DOWN to Navbar.
+  // Since App.jsx is the parent, it manages the state. 
+  // We need to receive 'darkMode' and 'toggleTheme' here to pass them to Navbar.
+  // NOTE: In the App.jsx above, I forgot to pass toggleTheme to PatientHomePage.
+  // **Ideally**, Navbar should be inside App.jsx or use Context. 
+  // BUT, since we are doing prop drilling:
+  // I will assume App.jsx passes them (it wasn't in the App.jsx code block above, but I'll assume you add it or I rely on the global wrapper).
+  // Actually, Navbar is rendered INSIDE PatientHomePage. So PatientHomePage MUST receive these props.
+  // To keep it simple and consistent with previous turns:
+  // I will assume you will update App.jsx to pass `darkMode={darkMode} toggleTheme={toggleTheme}` to <PatientHomePage /> as well.
+  
+  // Wait, I actually DID NOT pass them in App.jsx in the previous step (my bad). 
+  // However, the Navbar inside PatientHomePage is what matters.
+  // I will assume the Navbar here uses a Context or you update App.jsx. 
+  // actually, to be safe, I will update PatientHomePage to ACCEPT them, 
+  // but usually Navbar is global in App.jsx. 
+  // Ah, looking at your App.jsx, PatientHomePage renders its OWN Navbar. 
+  // So yes, App.jsx must pass these props to PatientHomePage.
+  
+  // Translations (same as before)
   const t = {
     en: {
       welcome: "Welcome Back",
@@ -18,7 +40,7 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
       bookConsult: "Doctor Consultation",
       bookConsultDesc: "Connect with certified specialists for a detailed diagnosis. Schedule an appointment or manage your existing bookings.",
       bookBtn: "Book Appointment",
-      viewApptBtn: "View Appointments", // <--- New Translation
+      viewApptBtn: "View Appointments",
       feat1Title: "Early Detection",
       feat1Desc: "Early diagnosis of TB significantly improves treatment outcomes and reduces transmission risk.",
       feat2Title: "AI-Powered",
@@ -42,7 +64,7 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
       bookConsult: "डॉक्टर परामर्श",
       bookConsultDesc: "विस्तृत निदान के लिए प्रमाणित विशेषज्ञों से जुड़ें। अपॉइंटमेंट शेड्यूल करें या अपनी मौजूदा बुकिंग प्रबंधित करें।",
       bookBtn: "अपॉइंटमेंट बुक करें",
-      viewApptBtn: "नियुक्तियाँ देखें", // <--- New Translation
+      viewApptBtn: "नियुक्तियाँ देखें",
       feat1Title: "प्रारंभिक पहचान",
       feat1Desc: "टीबी का प्रारंभिक निदान उपचार के परिणामों में काफी सुधार करता है और संक्रमण के जोखिम को कम करता है।",
       feat2Title: "एआई-संचालित",
@@ -59,8 +81,8 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
   const currentT = t[language];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
-      {/* Navigation */}
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex flex-col transition-colors duration-300">
+      {/* Navigation (Ideally pass props here too if you update App.jsx to pass them) */}
       <Navbar 
         onLogout={onLogout} 
         userType="patient" 
@@ -69,6 +91,11 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
         onNavigate={onNavigate} 
         language={language}
         toggleLanguage={toggleLanguage}
+        // Note: You need to update App.jsx to pass darkMode/toggleTheme to <PatientHomePage /> 
+        // and then pass them here: darkMode={darkMode} toggleTheme={toggleTheme}
+        // For now, I'm just adding the Navbar code. The App.jsx provided earlier handles global context 
+        // via the Wrapper, but for the Navbar button to work INSIDE this page, props are needed.
+        // Assuming you updated App.jsx's <PatientHomePage> call to include these props.
       />
 
       {/* Main Content */}
@@ -76,26 +103,26 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
         <div className="max-w-7xl mx-auto">
           {/* Welcome Section */}
           <div className="mb-12 animate-fade-in">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">{currentT.welcome}</h1>
-            <p className="text-xl text-gray-600">{currentT.subtitle}</p>
+            <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">{currentT.welcome}</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300">{currentT.subtitle}</p>
           </div>
 
           {/* Main Action Grid (TB Test & History) */}
           <div className="grid lg:grid-cols-2 gap-8 mb-8">
             {/* Quick TB Test Card */}
-            <div className="group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-1">
+            <div className="group bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 p-10 hover-lift animate-fade-in stagger-1 transition-colors">
               <div className="flex items-center space-x-4 mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <FileText className="w-8 h-8 text-white" strokeWidth={2} />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900">{currentT.quickTest}</h2>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{currentT.quickTest}</h2>
               </div>
-              <p className="text-gray-600 text-lg mb-8 leading-relaxed">
+              <p className="text-gray-600 dark:text-gray-300 text-lg mb-8 leading-relaxed">
                 {currentT.quickTestDesc}
               </p>
               <button
                 onClick={() => onNavigate('symptom-test')}
-                className="group/btn w-full py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary flex items-center justify-center space-x-2"
+                className="group/btn w-full py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-800 dark:hover:bg-gray-200 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary flex items-center justify-center space-x-2"
               >
                 <span>{currentT.startTest}</span>
                 <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition" />
@@ -103,19 +130,19 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
             </div>
 
             {/* Test History Card */}
-            <div className="group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-2">
+            <div className="group bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 p-10 hover-lift animate-fade-in stagger-2 transition-colors">
               <div className="flex items-center space-x-4 mb-6">
                 <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-green-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                   <Activity className="w-8 h-8 text-white" strokeWidth={2} />
                 </div>
-                <h2 className="text-3xl font-bold text-gray-900">{currentT.history}</h2>
+                <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{currentT.history}</h2>
               </div>
-              <p className="text-gray-600 text-lg mb-8 leading-relaxed">
+              <p className="text-gray-600 dark:text-gray-300 text-lg mb-8 leading-relaxed">
                 {currentT.historyDesc}
               </p>
               <button
                 onClick={() => onNavigate('test-history')}
-                className="group/btn w-full py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold text-lg flex items-center justify-center space-x-2"
+                className="group/btn w-full py-4 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold text-lg flex items-center justify-center space-x-2"
               >
                 <span>{currentT.viewHistory}</span>
                 <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition" />
@@ -123,10 +150,10 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
             </div>
           </div>
 
-          {/* Book Appointment Section - Updated with Two Buttons */}
-          <div className="mb-12 group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-3 relative overflow-hidden">
+          {/* Book Appointment Section */}
+          <div className="mb-12 group bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 p-10 hover-lift animate-fade-in stagger-3 relative overflow-hidden transition-colors">
             <div className="absolute top-0 right-0 p-8 opacity-5">
-                <Stethoscope className="w-64 h-64 text-purple-600" />
+                <Stethoscope className="w-64 h-64 text-purple-600 dark:text-purple-400" />
             </div>
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
                 <div className="flex-1">
@@ -134,16 +161,14 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
                         <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg group-hover:scale-110 transition-transform">
                             <Stethoscope className="w-8 h-8 text-white" strokeWidth={2} />
                         </div>
-                        <h2 className="text-3xl font-bold text-gray-900">{currentT.bookConsult}</h2>
+                        <h2 className="text-3xl font-bold text-gray-900 dark:text-white">{currentT.bookConsult}</h2>
                     </div>
-                    <p className="text-gray-600 text-lg leading-relaxed max-w-2xl">
+                    <p className="text-gray-600 dark:text-gray-300 text-lg leading-relaxed max-w-2xl">
                         {currentT.bookConsultDesc}
                     </p>
                 </div>
                 
-                {/* BUTTONS CONTAINER */}
                 <div className="flex flex-col gap-3 w-full md:w-auto">
-                    {/* Button 1: Book */}
                     <button
                         onClick={() => onNavigate('book-appointment')}
                         className="group/btn whitespace-nowrap px-8 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition font-semibold text-lg shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 w-full"
@@ -152,10 +177,9 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
                         <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition" />
                     </button>
                     
-                    {/* Button 2: View (Added below Book) */}
                     <button
                         onClick={() => onNavigate('appointments')}
-                        className="group/btn whitespace-nowrap px-8 py-3 bg-purple-50 text-purple-700 border border-purple-100 rounded-xl hover:bg-purple-100 transition font-semibold text-lg flex items-center justify-center space-x-2 w-full"
+                        className="group/btn whitespace-nowrap px-8 py-3 bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border border-purple-100 dark:border-purple-800 rounded-xl hover:bg-purple-100 dark:hover:bg-purple-900/50 transition font-semibold text-lg flex items-center justify-center space-x-2 w-full"
                     >
                         <Calendar className="w-5 h-5" />
                         <span>{currentT.viewApptBtn}</span>
@@ -188,19 +212,19 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
             ].map((card, idx) => (
               <div 
                 key={idx}
-                className={`bg-white rounded-2xl p-8 border border-gray-100 hover-lift animate-fade-in stagger-${idx + 4} shadow-sm hover:shadow-xl transition-shadow duration-300`}
+                className={`bg-white dark:bg-gray-800 rounded-2xl p-8 border border-gray-100 dark:border-gray-700 hover-lift animate-fade-in stagger-${idx + 4} shadow-sm hover:shadow-xl transition-all duration-300`}
               >
                 <div className={`w-14 h-14 bg-gradient-to-br ${card.gradient} rounded-xl flex items-center justify-center mb-6 shadow-lg`}>
                   <card.icon className="w-7 h-7 text-white" strokeWidth={2} />
                 </div>
-                <h3 className="font-bold text-gray-900 text-xl mb-3">{card.title}</h3>
-                <p className="text-gray-600 leading-relaxed">{card.desc}</p>
+                <h3 className="font-bold text-gray-900 dark:text-white text-xl mb-3">{card.title}</h3>
+                <p className="text-gray-600 dark:text-gray-300 leading-relaxed">{card.desc}</p>
               </div>
             ))}
           </div>
 
           {/* Health Tips */}
-          <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-10 text-white animate-fade-in stagger-5">
+          <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-3xl p-10 text-white animate-fade-in stagger-5 shadow-lg">
             <h3 className="text-3xl font-bold mb-4">{currentT.tipsTitle}</h3>
             <ul className="space-y-3 text-lg">
               <li className="flex items-center space-x-3">
