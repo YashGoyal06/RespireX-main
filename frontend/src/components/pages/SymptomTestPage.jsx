@@ -2,67 +2,99 @@ import React, { useState } from 'react';
 import { Check } from 'lucide-react';
 import Navbar from '../common/Navbar';
 
-// 1. Accept user and onLogout
-const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user }) => {
+const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user, language = 'en', toggleLanguage }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
 
-  // Questions specifically related to TB detection (Yes/No)
-  // Each "Yes" increases the likelihood/confidence of TB presence in the Symptom Score.
+  // Translation Dictionaries
+  const t = {
+    en: {
+      progress: "Complete",
+      symptomAssessment: "Symptom Assessment",
+      previous: "← Previous Question",
+      privacy: "Privacy Note:",
+      privacyText: "Your responses are confidential and used only for screening purposes",
+      yes: "Yes",
+      no: "No"
+    },
+    hi: {
+      progress: "पूर्ण",
+      symptomAssessment: "लक्षण मूल्यांकन",
+      previous: "← पिछला प्रश्न",
+      privacy: "गोपनीयता नोट:",
+      privacyText: "आपकी प्रतिक्रियाएं गोपनीय हैं और केवल स्क्रीनिंग उद्देश्यों के लिए उपयोग की जाती हैं",
+      yes: "हाँ",
+      no: "नहीं"
+    }
+  };
+
+  const currentT = t[language];
+
   const questions = [
     {
       id: 1,
-      question: "Do you have a persistent cough lasting more than 3 weeks?",
+      text_en: "Do you have a persistent cough lasting more than 3 weeks?",
+      text_hi: "क्या आपको 3 सप्ताह से अधिक समय से लगातार खांसी है?",
       options: ["Yes", "No"],
       key: "persistent_cough"
     },
     {
       id: 2,
-      question: "Have you experienced fever, especially in the evenings?",
+      text_en: "Have you experienced fever, especially in the evenings?",
+      text_hi: "क्या आपको बुखार है, विशेष रूप से शाम को?",
       options: ["Yes", "No"],
       key: "fever"
     },
     {
       id: 3,
-      question: "Have you noticed unexplained weight loss recently?",
+      text_en: "Have you noticed unexplained weight loss recently?",
+      text_hi: "क्या आपने हाल ही में बिना कारण वजन कम होते देखा है?",
       options: ["Yes", "No"],
       key: "weight_loss"
     },
     {
       id: 4,
-      question: "Do you experience night sweats?",
+      text_en: "Do you experience night sweats?",
+      text_hi: "क्या आपको रात में पसीना आता है?",
       options: ["Yes", "No"],
       key: "night_sweats"
     },
     {
       id: 5,
-      question: "Have you coughed up blood or blood-tinged sputum?",
+      text_en: "Have you coughed up blood or blood-tinged sputum?",
+      text_hi: "क्या आपको खांसी में खून या खून जैसा बलगम आया है?",
       options: ["Yes", "No"],
       key: "blood_cough"
     },
     {
       id: 6,
-      question: "Do you feel chest pain or discomfort?",
+      text_en: "Do you feel chest pain or discomfort?",
+      text_hi: "क्या आपको सीने में दर्द या बेचैनी महसूस होती है?",
       options: ["Yes", "No"],
       key: "chest_pain"
     },
     {
       id: 7,
-      question: "Have you experienced fatigue or weakness?",
+      text_en: "Have you experienced fatigue or weakness?",
+      text_hi: "क्या आपको थकान या कमजोरी महसूस होती है?",
       options: ["Yes", "No"],
       key: "fatigue"
     },
     {
       id: 8,
-      question: "Have you been in close contact with someone diagnosed with TB?",
+      text_en: "Have you been in close contact with someone diagnosed with TB?",
+      text_hi: "क्या आप टीबी से पीड़ित किसी व्यक्ति के निकट संपर्क में रहे हैं?",
       options: ["Yes", "No"],
       key: "tb_contact"
     }
   ];
 
   const handleAnswer = (answer) => {
+    // Always store answers in English ('Yes'/'No') for backend consistency
+    const standardAnswer = answer === currentT.yes ? "Yes" : "No";
+
     const updatedAnswers = {
       ...symptomAnswers,
-      [questions[currentQuestion].key]: answer
+      [questions[currentQuestion].key]: standardAnswer
     };
     setSymptomAnswers(updatedAnswers);
     
@@ -80,17 +112,19 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
   };
 
   const progress = ((currentQuestion + 1) / questions.length) * 100;
+  const activeQuestionText = language === 'hi' ? questions[currentQuestion].text_hi : questions[currentQuestion].text_en;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
-      {/* 2. Update Navbar */}
       <Navbar 
         showCancelButton={true}
         onCancel={() => onNavigate('patient-home')}
-        isLoggedIn={true}    // <--- Forces logged in view
-        user={user}          // <--- Profile Picture
-        onLogout={onLogout}  // <--- Logout Button
-        userType="patient"   // <--- Badge
+        isLoggedIn={true}    
+        user={user}          
+        onLogout={onLogout}  
+        userType="patient"   
+        language={language}
+        toggleLanguage={toggleLanguage}
       />
 
       {/* Progress Bar */}
@@ -98,9 +132,9 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-3">
             <span className="text-sm font-semibold text-gray-700">
-              Question {currentQuestion + 1} of {questions.length}
+              {language === 'hi' ? `प्रश्न ${currentQuestion + 1} / ${questions.length}` : `Question ${currentQuestion + 1} of ${questions.length}`}
             </span>
-            <span className="text-sm font-semibold text-blue-600">{Math.round(progress)}% Complete</span>
+            <span className="text-sm font-semibold text-blue-600">{Math.round(progress)}% {currentT.progress}</span>
           </div>
           <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
             <div
@@ -117,15 +151,15 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 animate-scale">
             <div className="mb-12">
               <div className="inline-block px-4 py-2 bg-blue-50 rounded-full mb-6">
-                <span className="text-sm font-semibold text-blue-600">Symptom Assessment</span>
+                <span className="text-sm font-semibold text-blue-600">{currentT.symptomAssessment}</span>
               </div>
               <h2 className="text-4xl font-bold text-gray-900 leading-relaxed">
-                {questions[currentQuestion].question}
+                {activeQuestionText}
               </h2>
             </div>
 
             <div className="space-y-4">
-              {questions[currentQuestion].options.map((option, index) => (
+              {[currentT.yes, currentT.no].map((option, index) => (
                 <button
                   key={index}
                   onClick={() => handleAnswer(option)}
@@ -144,14 +178,14 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
                 onClick={handlePrevious}
                 className="mt-8 text-gray-600 hover:text-gray-900 font-medium"
               >
-                ← Previous Question
+                {currentT.previous}
               </button>
             )}
           </div>
 
           <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-6 text-center animate-fade-in">
             <p className="text-gray-600">
-              <span className="font-semibold text-gray-900">Privacy Note:</span> Your responses are confidential and used only for screening purposes
+              <span className="font-semibold text-gray-900">{currentT.privacy}</span> {currentT.privacyText}
             </p>
           </div>
         </div>
