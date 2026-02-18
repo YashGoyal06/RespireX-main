@@ -27,7 +27,7 @@ const App = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const [user, setUser] = useState(null);
 
-  // --- MULTILINGUAL SUPPORT ---
+  // --- MULTILINGUAL STATE ---
   const [language, setLanguage] = useState('en'); // 'en' (English) | 'hi' (Hindi)
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'hi' : 'en');
@@ -159,8 +159,6 @@ const App = () => {
 
   const renderPage = () => {
     switch (currentPage) {
-      // Pass 'language' and 'toggleLanguage' to Navbar via page props (where applicable) 
-      // OR mostly just pass language to pages that need translation content
       
       case 'landing': return <LandingPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
       
@@ -169,27 +167,40 @@ const App = () => {
       case 'doctor-signup': return <DoctorSignup onNavigate={handleNavigate} />;
       case 'patient-signup': return <PatientSignup onNavigate={handleNavigate} user={user} />;
       
+      // --- UPDATED PATIENT PAGES (Passing language props) ---
       case 'patient-home': 
-        return <PatientHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
-      case 'doctor-home': 
-        return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
-      
-      case 'test-history': 
-        return <TestHistoryPage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
-      case 'book-appointment':
-        return <BookAppointmentPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
-      case 'appointments':
-        return <AppointmentsPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
-      
-      // PAGES WITH TRANSLATION
-      case 'symptom-test': 
-        return <SymptomTestPage 
+        return <PatientHomePage 
           onNavigate={handleNavigate} 
-          symptomAnswers={symptomAnswers} 
-          setSymptomAnswers={setSymptomAnswers} 
-          onLogout={handleLogout}
-          user={user}
-          language={language}           // <--- Passed
+          onLogout={handleLogout} 
+          user={user} 
+          language={language}             // <--- Passed
+          toggleLanguage={toggleLanguage} // <--- Passed
+        />;
+
+      case 'test-history': 
+        return <TestHistoryPage 
+          onNavigate={handleNavigate} 
+          onLogout={handleLogout} 
+          user={user} 
+          language={language}             // <--- Passed
+          toggleLanguage={toggleLanguage} // <--- Passed
+        />;
+
+      case 'book-appointment':
+        return <BookAppointmentPage 
+          onNavigate={handleNavigate} 
+          user={user} 
+          onLogout={handleLogout} 
+          language={language}             // <--- Passed
+          toggleLanguage={toggleLanguage} // <--- Passed
+        />;
+
+      case 'appointments':
+        return <AppointmentsPage 
+          onNavigate={handleNavigate} 
+          user={user} 
+          onLogout={handleLogout} 
+          language={language}             // <--- Passed
           toggleLanguage={toggleLanguage} // <--- Passed
         />;
       
@@ -197,8 +208,21 @@ const App = () => {
         return <XRayUploadPage 
           onNavigate={handleNavigate} 
           symptomAnswers={symptomAnswers} 
+          onLogout={handleLogout} 
+          user={user}
+          language={language}             // <--- Passed
+          toggleLanguage={toggleLanguage} // <--- Passed
+        />;
+
+      case 'symptom-test': 
+        return <SymptomTestPage 
+          onNavigate={handleNavigate} 
+          symptomAnswers={symptomAnswers} 
+          setSymptomAnswers={setSymptomAnswers} 
           onLogout={handleLogout}
           user={user}
+          language={language}             
+          toggleLanguage={toggleLanguage} 
         />;
       
       case 'test-result': 
@@ -208,10 +232,14 @@ const App = () => {
           onLogout={handleLogout}
           user={user}
           symptomAnswers={symptomAnswers}
-          language={language}           // <--- Passed
-          toggleLanguage={toggleLanguage} // <--- Passed
+          language={language}             
+          toggleLanguage={toggleLanguage} 
         />;
 
+      // Doctor pages (No changes as requested)
+      case 'doctor-home': 
+        return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
+      
       default: return <LandingPage onNavigate={handleNavigate} />;
     }
   };
@@ -227,16 +255,14 @@ const App = () => {
     );
   }
 
-  // Determine if Navbar should show language toggle
+  // Navbar Logic
   const showNavbar = !['landing', 'login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'xray-upload','book-appointment', 'appointments'].includes(currentPage);
-  // Note: I excluded 'symptom-test' and 'test-result' from the global navbar check because they render their OWN Navbar inside the component.
-  // The pages that render their own Navbar (SymptomTestPage, TestResultPage) will receive the props directly.
   
   const isUserLoggedIn = !!user;
 
   return (
     <div className="app-container">
-      {/* Global Navbar for pages that use it */}
+      {/* Global Navbar for pages that use it (and aren't excluding it) */}
       {showNavbar && !['symptom-test', 'test-result'].includes(currentPage) && (
         <Navbar 
           isLoggedIn={isUserLoggedIn}
@@ -245,6 +271,9 @@ const App = () => {
           onLogout={handleLogout}
           userType={null}
           onNavigate={handleNavigate}
+          // Pass props here too if Landing/Generic pages need toggle
+          language={language}
+          toggleLanguage={toggleLanguage}
         />
       )}
       {renderPage()}
