@@ -27,10 +27,16 @@ const App = () => {
   const [isCheckingAuth, setIsCheckingAuth] = useState(false);
   const [user, setUser] = useState(null);
 
+  // --- MULTILINGUAL SUPPORT ---
+  const [language, setLanguage] = useState('en'); // 'en' (English) | 'hi' (Hindi)
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'hi' : 'en');
+  };
+
   useEffect(() => {
     let mounted = true;
     
-    // Safety timer: If app hangs for 20s, stop loading but DO NOT change page blindly
+    // Safety timer
     const safetyTimer = setTimeout(() => {
       if (mounted && loading) {
         console.warn("⚠️ Safety timer triggered.");
@@ -71,7 +77,6 @@ const App = () => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         if (mounted) {
           setUser(session.user);
-          // Trust metadata immediately to prevent UI flicker
           if (session.user.user_metadata?.role === 'doctor') {
              setCurrentPage('doctor-home');
           }
@@ -96,7 +101,6 @@ const App = () => {
   }, []);
 
   const fetchUserRole = async (currentUser) => {
-    // 1. OPTIMIZATION: If we are already on the correct dashboard, stop.
     if (currentPage === 'doctor-home' || currentPage === 'patient-home') {
         setLoading(false);
         return;
@@ -107,7 +111,6 @@ const App = () => {
       const response = await api.get('/profile/');
       const role = response.data.role;
       
-      // STRICT SWITCHING ONLY
       if (role === 'doctor') {
         setCurrentPage('doctor-home');
       } else if (role === 'patient') {
@@ -117,31 +120,23 @@ const App = () => {
 
     } catch (err) {
       if (axios.isCancel(err)) {
-          console.log("ℹ️ Duplicate request ignored.");
           return; 
       }
       console.error("Profile fetch error:", err);
 
-      // Handle 404 (Profile missing)
       if (err.response && err.response.status === 404) {
         setCurrentPage('patient-signup'); 
         setLoading(false);
         return;
       }
 
-      // --- THE FIX: DISCONNECT LOGIC ---
-      // If API fails, check metadata.
       const metaRole = currentUser?.user_metadata?.role;
-
       if (metaRole === 'doctor') {
          setCurrentPage('doctor-home');
       } else if (metaRole === 'patient') {
          setCurrentPage('patient-home');
       } else {
-         // IF WE DON'T KNOW, STAY PUT. 
-         // DO NOT DEFAULT TO PATIENT HOME.
          console.warn("⚠️ Role unknown and API failed. Staying on current page.");
-         // Ideally stay on 'landing' or show error, but never force patient-home
       }
       
       setLoading(false);
@@ -164,7 +159,11 @@ const App = () => {
 
   const renderPage = () => {
     switch (currentPage) {
+      // Pass 'language' and 'toggleLanguage' to Navbar via page props (where applicable) 
+      // OR mostly just pass language to pages that need translation content
+      
       case 'landing': return <LandingPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      
       case 'login': return <LoginPage onNavigate={handleNavigate} />;
       case 'signup': return <SignupPage onNavigate={handleNavigate} />;
       case 'doctor-signup': return <DoctorSignup onNavigate={handleNavigate} />;
@@ -181,13 +180,38 @@ const App = () => {
         return <BookAppointmentPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
       case 'appointments':
         return <AppointmentsPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      
+      // PAGES WITH TRANSLATION
       case 'symptom-test': 
-        return <SymptomTestPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} setSymptomAnswers={setSymptomAnswers} onLogout={handleLogout} user={user} />;
+        return <SymptomTestPage 
+          onNavigate={handleNavigate} 
+          symptomAnswers={symptomAnswers} 
+          setSymptomAnswers={setSymptomAnswers} 
+          onLogout={handleLogout}
+          user={user}
+          language={language}           // <--- Passed
+          toggleLanguage={toggleLanguage} // <--- Passed
+        />;
+      
       case 'xray-upload': 
-        return <XRayUploadPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} onLogout={handleLogout} user={user} />;
+        return <XRayUploadPage 
+          onNavigate={handleNavigate} 
+          symptomAnswers={symptomAnswers} 
+          onLogout={handleLogout}
+          user={user}
+        />;
+      
       case 'test-result': 
-        return <TestResultPage onNavigate={handleNavigate} resultData={pageData} onLogout={handleLogout} user={user} symptomAnswers={symptomAnswers} />;
-        
+        return <TestResultPage 
+          onNavigate={handleNavigate} 
+          resultData={pageData} 
+          onLogout={handleLogout}
+          user={user}
+          symptomAnswers={symptomAnswers}
+          language={language}           // <--- Passed
+          toggleLanguage={toggleLanguage} // <--- Passed
+        />;
+
       default: return <LandingPage onNavigate={handleNavigate} />;
     }
   };
@@ -203,12 +227,17 @@ const App = () => {
     );
   }
 
-  const showNavbar = !['landing', 'login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'symptom-test', 'xray-upload', 'test-result','book-appointment', 'appointments'].includes(currentPage);
+  // Determine if Navbar should show language toggle
+  const showNavbar = !['landing', 'login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'xray-upload','book-appointment', 'appointments'].includes(currentPage);
+  // Note: I excluded 'symptom-test' and 'test-result' from the global navbar check because they render their OWN Navbar inside the component.
+  // The pages that render their own Navbar (SymptomTestPage, TestResultPage) will receive the props directly.
+  
   const isUserLoggedIn = !!user;
 
   return (
     <div className="app-container">
-      {showNavbar && (
+      {/* Global Navbar for pages that use it */}
+      {showNavbar && !['symptom-test', 'test-result'].includes(currentPage) && (
         <Navbar 
           isLoggedIn={isUserLoggedIn}
           user={user}
