@@ -16,8 +16,7 @@ import AppointmentsPage from './components/pages/AppointmentsPage';
 
 import { supabase } from './lib/supabase';
 import api from './lib/api';
-// import { Loader } from 'lucide-react'; // Removed
-import { GooeyLoader } from './components/common/GooeyLoader'; // Added
+import { GooeyLoader } from './components/common/GooeyLoader'; 
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -30,11 +29,14 @@ const App = () => {
   useEffect(() => {
     let mounted = true;
     
+    // --- FIX 1: Increased Safety Timer from 5s to 20s ---
+    // This prevents the loading screen from disappearing too early on slow connections
     const safetyTimer = setTimeout(() => {
       if (mounted && loading) {
+        console.warn("⚠️ Safety timer triggered: Forcing loading to false.");
         setLoading(false);
       }
-    }, 5000);
+    }, 20000); 
 
     const initApp = async () => {
       if (isCheckingAuth) return;
@@ -71,9 +73,11 @@ const App = () => {
     initApp();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (event === 'SIGNED_IN' && session) {
+      // Handle TOKEN_REFRESHED or SIGNED_IN
+      if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         if (mounted) {
           setUser(session.user);
+          // Only fetch role if we aren't already doing it
           if (!isCheckingAuth) {
             setIsCheckingAuth(true);
             await fetchUserRole(session.user);
@@ -109,17 +113,29 @@ const App = () => {
       setLoading(false);
 
     } catch (err) {
+      console.error("Profile fetch error:", err);
+
       // Logic: User Auth'd but no Profile -> Redirect to Profile Setup
       if (err.response && err.response.status === 404) {
         console.log("ℹ️ User authenticated but no profile found. Redirecting to setup.");
         setCurrentPage('patient-signup'); 
       } else {
-        console.error("Profile fetch error:", err);
+        // --- FIX 2: Prevent Doctor -> Patient Glitch ---
+        // If the API fails (e.g. network timeout), do NOT forcibly switch the page 
+        // if the user is already on the doctor dashboard.
+        
         const role = currentUser?.user_metadata?.role;
+        
         if (role === 'doctor') {
-          setCurrentPage('doctor-home');
+            setCurrentPage('doctor-home');
         } else {
-          setCurrentPage('patient-home');
+            // Only fallback to patient-home if we are NOT currently on the doctor page.
+            // This prevents a background error from demoting a doctor to a patient view.
+            if (currentPage !== 'doctor-home') {
+                setCurrentPage('patient-home');
+            } else {
+                console.warn("⚠️ API failed but keeping user on Doctor Home to prevent glitch.");
+            }
         }
       }
       setLoading(false);
@@ -141,7 +157,6 @@ const App = () => {
 
   const renderPage = () => {
     switch (currentPage) {
-      // Pass User & Logout to Landing Page
       case 'landing': return <LandingPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
       
       case 'login': return <LoginPage onNavigate={handleNavigate} />;
@@ -183,7 +198,7 @@ const App = () => {
           resultData={pageData} 
           onLogout={handleLogout}
           user={user}
-          symptomAnswers={symptomAnswers} // <--- Added to pass answers to Result Page
+          symptomAnswers={symptomAnswers} 
         />;
 
       default: return <LandingPage onNavigate={handleNavigate} />;
@@ -194,7 +209,6 @@ const App = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
-          {/* Changed Loader to GooeyLoader */}
           <GooeyLoader 
             className="mx-auto mb-8"
             primaryColor="#60a5fa" 
@@ -207,7 +221,6 @@ const App = () => {
     );
   }
 
-  // Updated exclusion list: Added 'landing' to prevent double navbar
   const showNavbar = !['landing', 'login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'symptom-test', 'xray-upload', 'test-result','book-appointment', 'appointments'].includes(currentPage);
   const isUserLoggedIn = !!user;
 
