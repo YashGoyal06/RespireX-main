@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Clock, Shield, Zap, ChevronRight, Activity, Stethoscope } from 'lucide-react';
+import { FileText, Clock, Shield, Zap, ChevronRight, Activity, Stethoscope, Calendar } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
@@ -15,9 +15,10 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
       history: "Test History",
       historyDesc: "View your previous test results and track your health progress over time.",
       viewHistory: "View History",
-      bookConsult: "Book Doctor Consultation",
-      bookConsultDesc: "Connect with certified specialists for a detailed diagnosis. Schedule an appointment to discuss your screening results and get professional medical advice.",
+      bookConsult: "Doctor Consultation",
+      bookConsultDesc: "Connect with certified specialists for a detailed diagnosis. Schedule an appointment or manage your existing bookings.",
       bookBtn: "Book Appointment",
+      viewApptBtn: "View Appointments", // <--- New Translation
       feat1Title: "Early Detection",
       feat1Desc: "Early diagnosis of TB significantly improves treatment outcomes and reduces transmission risk.",
       feat2Title: "AI-Powered",
@@ -38,9 +39,10 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
       history: "टेस्ट इतिहास",
       historyDesc: "अपने पिछले टेस्ट परिणाम देखें और समय के साथ अपनी स्वास्थ्य प्रगति को ट्रैक करें।",
       viewHistory: "इतिहास देखें",
-      bookConsult: "डॉक्टर परामर्श बुक करें",
-      bookConsultDesc: "विस्तृत निदान के लिए प्रमाणित विशेषज्ञों से जुड़ें। अपने स्क्रीनिंग परिणामों पर चर्चा करने और पेशेवर चिकित्सा सलाह लेने के लिए अपॉइंटमेंट शेड्यूल करें।",
+      bookConsult: "डॉक्टर परामर्श",
+      bookConsultDesc: "विस्तृत निदान के लिए प्रमाणित विशेषज्ञों से जुड़ें। अपॉइंटमेंट शेड्यूल करें या अपनी मौजूदा बुकिंग प्रबंधित करें।",
       bookBtn: "अपॉइंटमेंट बुक करें",
+      viewApptBtn: "नियुक्तियाँ देखें", // <--- New Translation
       feat1Title: "प्रारंभिक पहचान",
       feat1Desc: "टीबी का प्रारंभिक निदान उपचार के परिणामों में काफी सुधार करता है और संक्रमण के जोखिम को कम करता है।",
       feat2Title: "एआई-संचालित",
@@ -121,7 +123,7 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
             </div>
           </div>
 
-          {/* NEW: Book Appointment Section */}
+          {/* Book Appointment Section - Updated with Two Buttons */}
           <div className="mb-12 group bg-white rounded-3xl shadow-xl border border-gray-100 p-10 hover-lift animate-fade-in stagger-3 relative overflow-hidden">
             <div className="absolute top-0 right-0 p-8 opacity-5">
                 <Stethoscope className="w-64 h-64 text-purple-600" />
@@ -138,13 +140,27 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
                         {currentT.bookConsultDesc}
                     </p>
                 </div>
-                <button
-                    onClick={() => onNavigate('book-appointment')}
-                    className="group/btn whitespace-nowrap px-8 py-4 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition font-semibold text-lg shadow-lg hover:shadow-xl flex items-center space-x-2"
-                >
-                    <span>{currentT.bookBtn}</span>
-                    <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition" />
-                </button>
+                
+                {/* BUTTONS CONTAINER */}
+                <div className="flex flex-col gap-3 w-full md:w-auto">
+                    {/* Button 1: Book */}
+                    <button
+                        onClick={() => onNavigate('book-appointment')}
+                        className="group/btn whitespace-nowrap px-8 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition font-semibold text-lg shadow-lg hover:shadow-xl flex items-center justify-center space-x-2 w-full"
+                    >
+                        <span>{currentT.bookBtn}</span>
+                        <ChevronRight className="w-5 h-5 group-hover/btn:translate-x-1 transition" />
+                    </button>
+                    
+                    {/* Button 2: View (Added below Book) */}
+                    <button
+                        onClick={() => onNavigate('appointments')}
+                        className="group/btn whitespace-nowrap px-8 py-3 bg-purple-50 text-purple-700 border border-purple-100 rounded-xl hover:bg-purple-100 transition font-semibold text-lg flex items-center justify-center space-x-2 w-full"
+                    >
+                        <Calendar className="w-5 h-5" />
+                        <span>{currentT.viewApptBtn}</span>
+                    </button>
+                </div>
             </div>
           </div>
 
