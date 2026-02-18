@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, ArrowLeft, X, User, Globe } from 'lucide-react';
+import { LogOut, ArrowLeft, X, User, Globe, Sun, Moon } from 'lucide-react';
 
 const Navbar = ({ 
   isLoggedIn, 
@@ -13,27 +13,25 @@ const Navbar = ({
   showCancelButton,
   onNavigate,
   displayName,
-  language,         // <--- New Prop
-  toggleLanguage    // <--- New Prop
+  language,
+  toggleLanguage,
+  darkMode,     // <--- New Prop
+  toggleTheme   // <--- New Prop
 }) => {
   const DOCTOR_DEFAULT_IMG = "/doctorpfp.jpg"; 
   const PATIENT_MALE_IMG = "/male.jpg";
   const PATIENT_FEMALE_IMG = "/female.jpg";
   const PATIENT_DEFAULT_IMG = "/male.jpg";
 
-  // Helper: Get Display Name
   const getDisplayName = () => {
     if (displayName) return displayName; 
-    
     if (userType === 'doctor') return 'Doctor';
-    
     if (!user) return 'Guest';
     if (user.user_metadata?.full_name) return user.user_metadata.full_name;
     if (user.email) return user.email.split('@')[0];
     return 'User';
   };
 
-  // Helper: Get Avatar URL
   const getAvatarUrl = () => {
     if (userType === 'doctor') return DOCTOR_DEFAULT_IMG;
     if (!user) return null;
@@ -47,17 +45,15 @@ const Navbar = ({
   };
 
   return (
-    // Updated to a stronger "Glassy" theme
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/10 backdrop-blur-lg border-b border-white/20 shadow-lg">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-white/10 dark:bg-gray-900/40 backdrop-blur-lg border-b border-white/20 dark:border-gray-700 shadow-lg transition-colors duration-300">
       <div className="max-w-7xl mx-auto px-6 lg:px-8">
         <div className="flex justify-between items-center h-20">
           
-          {/* Logo Section - Now Clickable */}
           <div 
             onClick={() => onNavigate && onNavigate('landing')} 
             className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity"
           >
-            <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 bg-clip-text text-transparent">
+            <span className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-300 bg-clip-text text-transparent">
               RespireX
             </span>
             {userType && (
@@ -71,14 +67,24 @@ const Navbar = ({
             )}
           </div>
 
-          {/* Buttons Section */}
-          <div className="flex items-center space-x-4">
+          <div className="flex items-center space-x-3">
             
+            {/* --- DARK MODE TOGGLE --- */}
+            {toggleTheme && (
+              <button 
+                onClick={toggleTheme}
+                className="p-2 bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-600"
+                title="Toggle Theme"
+              >
+                {darkMode ? <Sun className="w-5 h-5 text-yellow-400" /> : <Moon className="w-5 h-5 text-gray-600" />}
+              </button>
+            )}
+
             {/* --- LANGUAGE TOGGLE --- */}
             {toggleLanguage && (
               <button 
                 onClick={toggleLanguage}
-                className="flex items-center space-x-1 px-3 py-2 bg-white/50 hover:bg-white rounded-lg transition text-gray-700 font-semibold text-sm border border-gray-200"
+                className="flex items-center space-x-1 px-3 py-2 bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-700 rounded-lg transition text-gray-700 dark:text-gray-200 font-semibold text-sm border border-gray-200 dark:border-gray-600"
               >
                 <Globe className="w-4 h-4" />
                 <span>{language === 'en' ? 'EN' : 'हिंदी'}</span>
@@ -89,7 +95,7 @@ const Navbar = ({
             {showBackButton && onBack && (
               <button
                 onClick={onBack}
-                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-900 hover:bg-white/40 rounded-full transition"
+                className="flex items-center space-x-2 px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-gray-700/50 rounded-full transition"
               >
                 <ArrowLeft className="w-5 h-5" />
                 <span className="font-medium">Back</span>
@@ -100,54 +106,50 @@ const Navbar = ({
             {showCancelButton && onCancel && (
               <button
                 onClick={onCancel}
-                className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-gray-900 hover:bg-white/40 rounded-full transition"
+                className="flex items-center space-x-2 px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-white/40 dark:hover:bg-gray-700/50 rounded-full transition"
               >
                 <X className="w-5 h-5" />
                 <span className="font-medium">Cancel</span>
               </button>
             )}
 
-            {/* --- AUTH BUTTONS SWITCH --- */}
+            {/* Auth Buttons */}
             {isLoggedIn ? (
               <div className="flex items-center gap-4">
-                
-                {/* User Profile Section */}
-                <div className="flex items-center gap-3 pl-4 border-l border-gray-200/50">
-                  <div className="h-10 w-10 rounded-full border-2 border-white shadow-sm overflow-hidden bg-gray-100 flex items-center justify-center">
+                <div className="flex items-center gap-3 pl-4 border-l border-gray-200/50 dark:border-gray-600/50">
+                  <div className="h-10 w-10 rounded-full border-2 border-white dark:border-gray-700 shadow-sm overflow-hidden bg-gray-100 flex items-center justify-center">
                     <img 
                       src={getAvatarUrl()} 
                       alt="Profile" 
                       className="h-full w-full object-cover"
                       onError={(e) => {
                         e.target.style.display = 'none'; 
-                        e.target.parentElement.innerHTML = '<svg class="w-6 h-6 text-gray-400" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+                        e.target.parentElement.innerHTML = '<svg class="w-6 h-6 text-gray-400" ... />';
                       }}
                     />
                   </div>
                   <div className="text-left hidden md:block">
-                    <p className="text-sm font-bold text-gray-900 leading-none">
+                    <p className="text-sm font-bold text-gray-900 dark:text-gray-100 leading-none">
                       {getDisplayName()}
                     </p>
-                    <p className="text-xs text-gray-500 mt-1 capitalize">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 capitalize">
                       {userType || 'Member'}
                     </p>
                   </div>
                 </div>
 
-                {/* Logout Button */}
                 <button
                   onClick={onLogout}
-                  className="flex items-center space-x-2 px-6 py-3 text-gray-600 hover:text-red-600 hover:bg-red-50/50 rounded-full transition group"
+                  className="flex items-center space-x-2 px-6 py-3 text-gray-600 dark:text-gray-300 hover:text-red-600 hover:bg-red-50/50 dark:hover:bg-red-900/30 rounded-full transition group"
                 >
                   <LogOut className="w-5 h-5 group-hover:text-red-600" />
                   <span className="font-medium">Logout</span>
                 </button>
               </div>
             ) : (
-              // Sign In Button - Only shows if NOT logged in
               <button
                 onClick={onLogin}
-                className="px-8 py-3 bg-gray-900 text-white rounded-full hover:bg-gray-800 transition font-medium shadow-lg hover:shadow-xl"
+                className="px-8 py-3 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition font-medium shadow-lg hover:shadow-xl"
               >
                 Sign In
               </button>
