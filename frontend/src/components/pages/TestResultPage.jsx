@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Activity, Loader, Mail, ShieldCheck, MapPin, QrCode } from 'lucide-react'; // Added Icons
+import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Activity, Loader, Mail, ShieldCheck, MapPin, QrCode } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import api from '../../lib/api';
 
-const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers, language = 'en', toggleLanguage }) => {
+const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers, language = 'en', toggleLanguage, darkMode, toggleTheme }) => {
   const [downloading, setDownloading] = useState(false);
   const [emailing, setEmailing] = useState(false); 
-  const [showConfetti, setShowConfetti] = useState(false);
 
   const result = resultData?.result || resultData || {};
-  const resultId = result.id || "RES-X892-2026"; // Fallback ID for demo
+  const resultId = result.id || "RES-X892-2026";
   
   const xrayImage = resultData?.xray_image_url || resultData?.originalImage || null;
   const detected = result.result === 'Positive';
@@ -20,13 +19,10 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
     ? new Date(resultData.uploadDate).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : new Date().toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
 
-  // Mock Blockchain Hash (Stable based on ID)
   const blockchainHash = `0x${resultId.toString().split('').map(c => c.charCodeAt(0).toString(16)).join('')}f9a2b3c...`;
 
-  // --- TRANSLATIONS ---
   const t = {
     en: {
-        // ... (Existing translations)
         analysisComplete: "Analysis Complete",
         yourResults: "Your Test Results",
         completedOn: "Completed on",
@@ -57,8 +53,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
         viewHistory: "View History",
         regimenNote: "Standard First-Line Regimen (Subject to Doctor's Prescription)",
         supplementNote: "Supplements to boost respiratory health",
-
-        // NEW TRANSLATIONS
         verified: "Blockchain Verified Record",
         verifiedDesc: "This report is immutable and secured on the RespireX Ledger.",
         txnHash: "Transaction Hash:",
@@ -67,7 +61,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
         qrDesc: "Share this QR code with your specialist for instant access to digital records."
     },
     hi: {
-        // ... (Existing translations)
         analysisComplete: "विश्लेषण पूर्ण",
         yourResults: "आपके टेस्ट परिणाम",
         completedOn: "को पूरा हुआ",
@@ -98,8 +91,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
         viewHistory: "इतिहास देखें",
         regimenNote: "मानक प्रथम-पंक्ति उपचार (डॉक्टर की पर्ची के अधीन)",
         supplementNote: "श्वसन स्वास्थ्य को बढ़ावा देने के लिए पूरक",
-
-        // NEW TRANSLATIONS
         verified: "ब्लॉकचेन सत्यापित रिकॉर्ड",
         verifiedDesc: "यह रिपोर्ट अपरिवर्तनीय है और रेस्पायरएक्स लेज़र पर सुरक्षित है।",
         txnHash: "ट्रांजेक्शन हैश:",
@@ -111,7 +102,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
 
   const currentT = t[language];
 
-  // Helper to translate Medicine Descriptions
   const getMedications = () => {
     if (detected) {
       return {
@@ -200,14 +190,13 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
     }
   };
 
-  // --- NEW FEATURE: OPEN GOOGLE MAPS ---
   const handleLocateClinic = () => {
     const query = language === 'hi' ? 'टीबी विशेषज्ञ निकट' : 'TB specialists near me';
-    window.open(`https://www.google.com/maps/search/${query}`, '_blank');
+    window.open(`http://googleusercontent.com/maps.google.com/?q=${query}`, '_blank');
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-slate-100 dark:from-gray-900 dark:to-gray-800 transition-colors">
       <Navbar 
         showBackButton={true}
         onBack={() => onNavigate('patient-home')}
@@ -217,28 +206,30 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
         userType="patient"
         language={language}
         toggleLanguage={toggleLanguage}
+        darkMode={darkMode}
+        toggleTheme={toggleTheme}
       />
 
       <div className="pt-32 pb-20 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12 animate-fade-in">
             <div className={`inline-block px-4 py-2 rounded-full mb-6 ${
-              detected ? 'bg-orange-50' : 'bg-green-50'
+              detected ? 'bg-orange-50 dark:bg-orange-900/30' : 'bg-green-50 dark:bg-green-900/30'
             }`}>
               <span className={`text-sm font-semibold ${
-                detected ? 'text-orange-600' : 'text-green-600'
+                detected ? 'text-orange-600 dark:text-orange-300' : 'text-green-600 dark:text-green-300'
               }`}>
                 {currentT.analysisComplete}
               </span>
             </div>
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">{currentT.yourResults}</h1>
-            <p className="text-xl text-gray-600">{currentT.completedOn} {uploadDate}</p>
+            <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">{currentT.yourResults}</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300">{currentT.completedOn} {uploadDate}</p>
           </div>
 
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 mb-8 text-center animate-scale relative overflow-hidden">
-            {/* --- BLOCKCHAIN WATERMARK (Background) --- */}
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-12 mb-8 text-center animate-scale relative overflow-hidden transition-colors">
+            
             <div className="absolute top-0 right-0 opacity-5 pointer-events-none">
-                <ShieldCheck className="w-64 h-64 text-gray-900" />
+                <ShieldCheck className="w-64 h-64 text-gray-900 dark:text-white" />
             </div>
 
             {!detected ? (
@@ -246,18 +237,17 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
                 <div className="w-28 h-28 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl animate-pulse">
                   <CheckCircle className="w-16 h-16 text-white" strokeWidth={2.5} />
                 </div>
-                <h2 className="text-4xl font-bold text-gray-900 mb-4">{currentT.noTbDetected}</h2>
-                <p className="text-lg text-gray-600 mb-8">{currentT.noTbDesc}</p>
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">{currentT.noTbDetected}</h2>
+                <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">{currentT.noTbDesc}</p>
               </>
             ) : (
               <>
                 <div className="w-28 h-28 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl">
                   <AlertTriangle className="w-16 h-16 text-white" strokeWidth={2.5} />
                 </div>
-                <h2 className="text-4xl font-bold text-gray-900 mb-4">{currentT.tbDetected}</h2>
-                <p className="text-lg text-gray-600 mb-8">{currentT.tbDesc}</p>
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">{currentT.tbDetected}</h2>
+                <p className="text-lg text-gray-600 dark:text-gray-300 mb-8">{currentT.tbDesc}</p>
                 
-                {/* --- NEW: FIND CLINIC BUTTON (Only if Positive) --- */}
                 <button 
                   onClick={handleLocateClinic}
                   className="mb-8 inline-flex items-center space-x-2 px-6 py-3 bg-red-600 text-white rounded-full hover:bg-red-700 transition font-bold shadow-md animate-bounce"
@@ -268,44 +258,42 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
               </>
             )}
             
-            {/* Stats Grid */}
             <div className="flex items-center justify-center space-x-8 mb-8">
               <div className="flex flex-col items-center">
-                <p className="text-gray-600 mb-2">{currentT.confidence}</p>
-                <p className="text-5xl font-bold text-gray-900">{Math.round(modelConfidence)}%</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-2">{currentT.confidence}</p>
+                <p className="text-5xl font-bold text-gray-900 dark:text-white">{Math.round(modelConfidence)}%</p>
                 
-                <div className="mt-4 flex flex-col space-y-1 text-sm bg-gray-50 p-3 rounded-lg border border-gray-100 w-48">
+                <div className="mt-4 flex flex-col space-y-1 text-sm bg-gray-50 dark:bg-gray-700 p-3 rounded-lg border border-gray-100 dark:border-gray-600 w-48">
                    <div className="flex justify-between w-full">
-                      <span className="text-gray-500">{currentT.symptoms}:</span>
-                      <span className="font-semibold text-gray-800">{Math.round(symptomScore)}%</span>
+                      <span className="text-gray-500 dark:text-gray-300">{currentT.symptoms}:</span>
+                      <span className="font-semibold text-gray-800 dark:text-gray-100">{Math.round(symptomScore)}%</span>
                    </div>
-                   <div className="flex justify-between w-full border-t border-gray-200 pt-1 mt-1">
-                      <span className="text-gray-500">{currentT.combined}:</span>
-                      <span className="font-semibold text-blue-600">{Math.round(meanScore)}%</span>
+                   <div className="flex justify-between w-full border-t border-gray-200 dark:border-gray-600 pt-1 mt-1">
+                      <span className="text-gray-500 dark:text-gray-300">{currentT.combined}:</span>
+                      <span className="font-semibold text-blue-600 dark:text-blue-400">{Math.round(meanScore)}%</span>
                    </div>
                 </div>
               </div>
 
-              <div className="h-24 w-px bg-gray-200"></div>
+              <div className="h-24 w-px bg-gray-200 dark:bg-gray-700"></div>
 
               <div>
-                <p className="text-gray-600 mb-2">{currentT.risk}</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-2">{currentT.risk}</p>
                 <div className={`inline-block px-8 py-3 rounded-full font-bold text-lg ${
-                  riskLevel === 'High' ? 'bg-red-100 text-red-700' :
-                  riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-green-100 text-green-700'
+                  riskLevel === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' :
+                  riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300' :
+                  'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
                 }`}>
                   {riskLevel}
                 </div>
               </div>
             </div>
 
-            {/* ACTION BUTTONS ROW */}
             <div className="flex space-x-4 justify-center">
               <button 
                 onClick={handleDownload}
                 disabled={downloading}
-                className="flex items-center space-x-2 px-6 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold shadow-lg disabled:opacity-50"
+                className="flex items-center space-x-2 px-6 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-800 dark:hover:bg-gray-200 transition font-semibold shadow-lg disabled:opacity-50"
               >
                 {downloading ? <Loader className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                 <span>{downloading ? currentT.downloading : currentT.download}</span>
@@ -314,52 +302,49 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
               <button 
                 onClick={handleEmailReport}
                 disabled={emailing}
-                className="flex items-center space-x-2 px-6 py-4 bg-white text-gray-900 border border-gray-200 rounded-xl hover:bg-gray-50 transition font-semibold shadow-lg disabled:opacity-50"
+                className="flex items-center space-x-2 px-6 py-4 bg-white dark:bg-gray-700 text-gray-900 dark:text-white border border-gray-200 dark:border-gray-600 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-600 transition font-semibold shadow-lg disabled:opacity-50"
               >
-                {emailing ? <Loader className="w-5 h-5 animate-spin text-blue-600" /> : <Mail className="w-5 h-5 text-blue-600" />}
+                {emailing ? <Loader className="w-5 h-5 animate-spin text-blue-600" /> : <Mail className="w-5 h-5 text-blue-600 dark:text-blue-400" />}
                 <span>{emailing ? currentT.sending : currentT.email}</span>
               </button>
 
               <button 
                 onClick={handleShare}
-                className="flex items-center space-x-2 px-6 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold shadow-lg"
+                className="flex items-center space-x-2 px-6 py-4 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold shadow-lg"
               >
                 <Share2 className="w-5 h-5" />
                 <span>{currentT.share}</span>
               </button>
             </div>
             
-            {/* --- NEW: BLOCKCHAIN VERIFICATION SECTION --- */}
-            <div className="mt-12 pt-8 border-t border-gray-100 text-left bg-gray-50 -mx-12 -mb-12 px-12 pb-8">
+            <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-700 text-left bg-gray-50 dark:bg-gray-700/50 -mx-12 -mb-12 px-12 pb-8">
               <div className="flex flex-col md:flex-row items-center justify-between gap-6">
                 
-                {/* Hash Details */}
                 <div className="flex items-start space-x-3 flex-1">
-                   <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
                       <ShieldCheck className="w-6 h-6" />
                    </div>
                    <div>
-                      <h4 className="font-bold text-gray-900 flex items-center">
+                      <h4 className="font-bold text-gray-900 dark:text-white flex items-center">
                          {currentT.verified} 
                          <CheckCircle className="w-4 h-4 text-green-500 ml-2" />
                       </h4>
-                      <p className="text-xs text-gray-500 mt-1">{currentT.verifiedDesc}</p>
-                      <div className="mt-2 text-[10px] font-mono bg-gray-200 p-2 rounded text-gray-600 break-all border border-gray-300">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{currentT.verifiedDesc}</p>
+                      <div className="mt-2 text-[10px] font-mono bg-gray-200 dark:bg-gray-600 p-2 rounded text-gray-600 dark:text-gray-300 break-all border border-gray-300 dark:border-gray-500">
                          {currentT.txnHash} {blockchainHash}
                       </div>
                    </div>
                 </div>
 
-                {/* QR Code */}
-                <div className="flex items-center space-x-4 bg-white p-3 rounded-xl border border-gray-200 shadow-sm">
+                <div className="flex items-center space-x-4 bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
                    <img 
                       src={`https://api.qrserver.com/v1/create-qr-code/?size=80x80&data=RESPIREX-REPORT-${resultId}`} 
                       alt="Report QR" 
                       className="w-16 h-16"
                    />
                    <div className="max-w-[140px]">
-                      <p className="text-xs font-bold text-gray-900">{currentT.scanQr}</p>
-                      <p className="text-[10px] text-gray-500 leading-tight mt-1">{currentT.qrDesc}</p>
+                      <p className="text-xs font-bold text-gray-900 dark:text-white">{currentT.scanQr}</p>
+                      <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-tight mt-1">{currentT.qrDesc}</p>
                    </div>
                 </div>
 
@@ -369,18 +354,18 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
           </div>
 
           {xrayImage && (
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-8 animate-fade-in stagger-1">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">{currentT.analyzedXray}</h3>
-              <div className="rounded-xl overflow-hidden border-2 border-gray-200">
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8 mb-8 animate-fade-in stagger-1">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">{currentT.analyzedXray}</h3>
+              <div className="rounded-xl overflow-hidden border-2 border-gray-200 dark:border-gray-600">
                 <img src={xrayImage} alt="Analyzed X-ray" className="w-full h-auto" />
               </div>
             </div>
           )}
 
           <div className="grid md:grid-cols-2 gap-8 mb-8">
-            <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 animate-fade-in stagger-2">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
-                <FileText className="w-7 h-7 text-blue-600" />
+            <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-8 animate-fade-in stagger-2">
+              <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-6 flex items-center space-x-3">
+                <FileText className="w-7 h-7 text-blue-600 dark:text-blue-400" />
                 <span>{currentT.recommendations}</span>
               </h3>
               <div className="space-y-4">
@@ -388,22 +373,22 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
                   <>
                     <div className="flex items-start space-x-3">
                       <AlertTriangle className="w-6 h-6 text-orange-500 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                      <p className="text-gray-700 leading-relaxed">{currentT.consultDoc}</p>
+                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{currentT.consultDoc}</p>
                     </div>
                     <div className="flex items-start space-x-3">
                       <AlertTriangle className="w-6 h-6 text-orange-500 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                      <p className="text-gray-700 leading-relaxed">{currentT.sputumTest}</p>
+                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{currentT.sputumTest}</p>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="flex items-start space-x-3">
                       <CheckCircle className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                      <p className="text-gray-700 leading-relaxed">{currentT.hygiene}</p>
+                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{currentT.hygiene}</p>
                     </div>
                     <div className="flex items-start space-x-3">
                       <CheckCircle className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                      <p className="text-gray-700 leading-relaxed">{currentT.checkup}</p>
+                      <p className="text-gray-700 dark:text-gray-300 leading-relaxed">{currentT.checkup}</p>
                     </div>
                   </>
                 )}
@@ -411,20 +396,20 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
             </div>
 
             <div className={`rounded-2xl shadow-lg p-8 animate-fade-in stagger-3 border ${
-              detected ? 'bg-orange-50 border-orange-100' : 'bg-green-50 border-green-100'
+              detected ? 'bg-orange-50 dark:bg-orange-900/30 border-orange-100 dark:border-orange-800' : 'bg-green-50 dark:bg-green-900/30 border-green-100 dark:border-green-800'
             }`}>
               <div className="flex items-center justify-between mb-6">
                 <h3 className={`text-2xl font-bold flex items-center gap-2 ${
-                  detected ? 'text-orange-900' : 'text-green-900'
+                  detected ? 'text-orange-900 dark:text-orange-200' : 'text-green-900 dark:text-green-200'
                 }`}>
-                  <Pill className={`w-6 h-6 ${detected ? 'text-orange-600' : 'text-green-600'}`} />
+                  <Pill className={`w-6 h-6 ${detected ? 'text-orange-600 dark:text-orange-400' : 'text-green-600 dark:text-green-400'}`} />
                   {currentT.medications}
                 </h3>
                 <Activity className={`w-6 h-6 ${detected ? 'text-orange-400' : 'text-green-400'}`} />
               </div>
 
               <div className={`mb-4 text-sm font-medium p-3 rounded-lg ${
-                detected ? 'bg-orange-100 text-orange-800' : 'bg-green-100 text-green-800'
+                detected ? 'bg-orange-100 dark:bg-orange-900/50 text-orange-800 dark:text-orange-200' : 'bg-green-100 dark:bg-green-900/50 text-green-800 dark:text-green-200'
               }`}>
                 {medicationData.note}
               </div>
@@ -432,33 +417,33 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
               <ul className="space-y-3">
                 {medicationData.meds.map((med, idx) => (
                   <li key={idx} className={`p-3 rounded-xl border ${
-                    detected ? 'bg-white/60 border-orange-200' : 'bg-white/60 border-green-200'
+                    detected ? 'bg-white/60 dark:bg-gray-800/60 border-orange-200 dark:border-orange-800' : 'bg-white/60 dark:bg-gray-800/60 border-green-200 dark:border-green-800'
                   }`}>
                     <div className="flex justify-between items-center mb-1">
                       <span className={`font-bold text-lg ${
-                        detected ? 'text-gray-900' : 'text-gray-900'
+                        detected ? 'text-gray-900 dark:text-white' : 'text-gray-900 dark:text-white'
                       }`}>{med.name}</span>
                       <span className={`text-xs font-bold px-2 py-1 rounded ${
-                        detected ? 'bg-orange-100 text-orange-700' : 'bg-green-100 text-green-700'
+                        detected ? 'bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-300' : 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300'
                       }`}>{med.dose}</span>
                     </div>
-                    <p className="text-xs text-gray-600 leading-relaxed">{med.desc}</p>
+                    <p className="text-xs text-gray-600 dark:text-gray-400 leading-relaxed">{med.desc}</p>
                   </li>
                 ))}
               </ul>
 
-              <div className="mt-6 pt-4 border-t border-gray-200 text-xs text-gray-500 text-center">
+              <div className="mt-6 pt-4 border-t border-gray-200 dark:border-gray-700 text-xs text-gray-500 dark:text-gray-400 text-center">
                 {currentT.aiWarning}
               </div>
             </div>
           </div>
 
-          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 border-2 border-yellow-200 rounded-2xl p-8 mb-8 animate-fade-in stagger-4">
+          <div className="bg-gradient-to-r from-yellow-50 to-orange-50 dark:from-yellow-900/20 dark:to-orange-900/20 border-2 border-yellow-200 dark:border-yellow-800 rounded-2xl p-8 mb-8 animate-fade-in stagger-4">
             <div className="flex items-start space-x-4">
-              <AlertTriangle className="w-8 h-8 text-yellow-600 flex-shrink-0 mt-1" />
+              <AlertTriangle className="w-8 h-8 text-yellow-600 dark:text-yellow-400 flex-shrink-0 mt-1" />
               <div>
-                <h4 className="font-bold text-gray-900 text-xl mb-3">{currentT.disclaimerTitle}</h4>
-                <p className="text-gray-700 leading-relaxed">
+                <h4 className="font-bold text-gray-900 dark:text-white text-xl mb-3">{currentT.disclaimerTitle}</h4>
+                <p className="text-gray-700 dark:text-gray-300 leading-relaxed">
                   {currentT.disclaimerText}
                 </p>
               </div>
@@ -468,14 +453,14 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
           <div className="flex space-x-4 animate-fade-in stagger-5">
             <button
               onClick={() => onNavigate('patient-home')}
-              className="flex-1 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 font-semibold text-lg shadow-lg hover:shadow-xl btn-primary flex items-center justify-center space-x-2"
+              className="flex-1 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-800 dark:hover:bg-gray-200 font-semibold text-lg shadow-lg hover:shadow-xl btn-primary flex items-center justify-center space-x-2"
             >
               <Home className="w-5 h-5" />
               <span>{currentT.backHome}</span>
             </button>
             <button
               onClick={() => onNavigate('test-history')}
-              className="flex-1 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 font-semibold text-lg flex items-center justify-center space-x-2 transition"
+              className="flex-1 py-4 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 font-semibold text-lg flex items-center justify-center space-x-2 transition"
             >
               <FileText className="w-5 h-5" />
               <span>{currentT.viewHistory}</span>
