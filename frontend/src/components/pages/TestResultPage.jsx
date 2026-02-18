@@ -3,22 +3,117 @@ import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Act
 import Navbar from '../common/Navbar';
 import api from '../../lib/api';
 
-const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers }) => {
+const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers, language = 'en', toggleLanguage }) => {
   const [downloading, setDownloading] = useState(false);
-  const [emailing, setEmailing] = useState(false); // State for email loading
+  const [emailing, setEmailing] = useState(false); 
 
   const result = resultData?.result || resultData || {};
   const resultId = result.id; 
   
   const xrayImage = resultData?.xray_image_url || resultData?.originalImage || null;
-  
   const detected = result.result === 'Positive';
   const modelConfidence = parseFloat(result.confidence_score) || 0;
   const riskLevel = result.risk_level || 'Low';
   
   const uploadDate = resultData?.uploadDate 
-    ? new Date(resultData.uploadDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-    : new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+    ? new Date(resultData.uploadDate).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : new Date().toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+
+  // --- TRANSLATIONS ---
+  const t = {
+    en: {
+        analysisComplete: "Analysis Complete",
+        yourResults: "Your Test Results",
+        completedOn: "Completed on",
+        noTbDetected: "No TB Signs Detected",
+        noTbDesc: "Your X-ray analysis shows no signs of tuberculosis",
+        tbDetected: "TB Signs Detected",
+        tbDesc: "Please consult a healthcare professional immediately",
+        confidence: "Model Confidence",
+        symptoms: "Symptoms",
+        combined: "Combined",
+        risk: "Risk Level",
+        download: "Download PDF",
+        downloading: "Downloading...",
+        email: "Email Report",
+        sending: "Sending...",
+        share: "Share",
+        analyzedXray: "Analyzed X-Ray",
+        recommendations: "Recommendations",
+        consultDoc: "Consult a healthcare professional immediately.",
+        sputumTest: "Sputum culture test recommended.",
+        hygiene: "Maintain good hygiene and immunity.",
+        checkup: "Routine check-up in 6 months.",
+        medications: "Suggested Medications",
+        aiWarning: "⚠ AI Generated Recommendation. This is NOT a medical prescription.",
+        disclaimerTitle: "Important Disclaimer",
+        disclaimerText: "This tool helps in early detection but does not replace a doctor. The medications listed above are standard protocols for reference only. Do not consume any medication without a verified prescription from a certified medical practitioner.",
+        backHome: "Back to Home",
+        viewHistory: "View History",
+        regimenNote: "Standard First-Line Regimen (Subject to Doctor's Prescription)",
+        supplementNote: "Supplements to boost respiratory health"
+    },
+    hi: {
+        analysisComplete: "विश्लेषण पूर्ण",
+        yourResults: "आपके टेस्ट परिणाम",
+        completedOn: "को पूरा हुआ",
+        noTbDetected: "टीबी के कोई संकेत नहीं मिले",
+        noTbDesc: "आपके एक्स-रे विश्लेषण में तपेदिक के कोई संकेत नहीं दिखे",
+        tbDetected: "टीबी के संकेत मिले",
+        tbDesc: "कृपया तुरंत किसी स्वास्थ्य विशेषज्ञ से सलाह लें",
+        confidence: "मॉडल आत्मविश्वास",
+        symptoms: "लक्षण",
+        combined: "संयुक्त",
+        risk: "जोखिम स्तर",
+        download: "पीडीएफ डाउनलोड करें",
+        downloading: "डाउनलोड हो रहा है...",
+        email: "रिपोर्ट ईमेल करें",
+        sending: "भेजा जा रहा है...",
+        share: "साझा करें",
+        analyzedXray: "विश्लेषित एक्स-रे",
+        recommendations: "सुझाव",
+        consultDoc: "तुरंत किसी स्वास्थ्य विशेषज्ञ से सलाह लें।",
+        sputumTest: "थूक कल्चर टेस्ट की सिफारिश की जाती है।",
+        hygiene: "अच्छी स्वच्छता और प्रतिरक्षा बनाए रखें।",
+        checkup: "6 महीने में नियमित जांच।",
+        medications: "सुझाई गई दवाएं",
+        aiWarning: "⚠ एआई जनित सुझाव। यह चिकित्सा पर्ची नहीं है।",
+        disclaimerTitle: "महत्वपूर्ण अस्वीकरण",
+        disclaimerText: "यह उपकरण प्रारंभिक पहचान में मदद करता है लेकिन डॉक्टर की जगह नहीं लेता है। ऊपर सूचीबद्ध दवाएं केवल संदर्भ के लिए मानक प्रोटोकॉल हैं। प्रमाणित चिकित्सा व्यवसायी से सत्यापित पर्ची के बिना किसी भी दवा का सेवन न करें।",
+        backHome: "होम पर वापस जाएं",
+        viewHistory: "इतिहास देखें",
+        regimenNote: "मानक प्रथम-पंक्ति उपचार (डॉक्टर की पर्ची के अधीन)",
+        supplementNote: "श्वसन स्वास्थ्य को बढ़ावा देने के लिए पूरक"
+    }
+  };
+
+  const currentT = t[language];
+
+  // Helper to translate Medicine Descriptions
+  const getMedications = () => {
+    if (detected) {
+      return {
+        type: "critical",
+        note: currentT.regimenNote,
+        meds: [
+          { name: "Isoniazid (H)", dose: "5 mg/kg", desc: language === 'hi' ? "तपेदिक के उपचार के लिए एंटीबायोटिक।" : "Antibiotic used for treatment of tuberculosis." },
+          { name: "Rifampicin (R)", dose: "10 mg/kg", desc: language === 'hi' ? "बैक्टीरियल संक्रमण के इलाज के लिए एंटीबायोटिक।" : "Antibiotic used to treat bacterial infections." },
+          { name: "Pyrazinamide (Z)", dose: "25 mg/kg", desc: language === 'hi' ? "उपचार के पहले 2 महीनों में उपयोग किया जाता है।" : "Used in the first 2 months of treatment." },
+          { name: "Ethambutol (E)", dose: "15 mg/kg", desc: language === 'hi' ? "बैक्टीरिया को प्रजनन करने से रोकता है।" : "Prevents bacteria from reproducing." }
+        ]
+      };
+    } else {
+      return {
+        type: "preventive",
+        note: currentT.supplementNote,
+        meds: [
+          { name: "Vitamin D3", dose: "1000 IU", desc: language === 'hi' ? "प्रतिरक्षा प्रणाली के कार्य का समर्थन करता है।" : "Supports immune system function." },
+          { name: "Vitamin C", dose: "500 mg", desc: language === 'hi' ? "एंटीऑक्सीडेंट जो कोशिकाओं को नुकसान से बचाता है।" : "Antioxidant that protects cells from damage." },
+          { name: "Zinc Gluconate", dose: "50 mg", desc: language === 'hi' ? "प्रतिरक्षा प्रणाली को बैक्टीरिया से लड़ने में मदद करता है।" : "Helps immune system fight off invading bacteria." }
+        ]
+      };
+    }
+  };
 
   const calculateScores = () => {
     let symptomScore = 0;
@@ -38,78 +133,35 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
   };
 
   const { symptomScore, meanScore } = calculateScores();
-
-  const getMedications = () => {
-    if (detected) {
-      return {
-        type: "critical",
-        note: "Standard First-Line Regimen (Subject to Doctor's Prescription)",
-        meds: [
-          { name: "Isoniazid (H)", dose: "5 mg/kg", desc: "Antibiotic used for treatment of tuberculosis." },
-          { name: "Rifampicin (R)", dose: "10 mg/kg", desc: "Antibiotic used to treat bacterial infections." },
-          { name: "Pyrazinamide (Z)", dose: "25 mg/kg", desc: "Used in the first 2 months of treatment." },
-          { name: "Ethambutol (E)", dose: "15 mg/kg", desc: "Prevents bacteria from reproducing." }
-        ]
-      };
-    } else {
-      return {
-        type: "preventive",
-        note: "Supplements to boost respiratory health",
-        meds: [
-          { name: "Vitamin D3", dose: "1000 IU", desc: "Supports immune system function." },
-          { name: "Vitamin C", dose: "500 mg", desc: "Antioxidant that protects cells from damage." },
-          { name: "Zinc Gluconate", dose: "50 mg", desc: "Helps immune system fight off invading bacteria." }
-        ]
-      };
-    }
-  };
-
   const medicationData = getMedications();
 
   const handleDownload = async () => {
-    if (!resultId) {
-        alert("Report ID missing. Cannot download.");
-        return;
-    }
-
+    if (!resultId) { alert("Report ID missing."); return; }
     try {
         setDownloading(true);
-        const response = await api.get(`/report/${resultId}/`, {
-            responseType: 'blob' 
-        });
-
+        const response = await api.get(`/report/${resultId}/`, { responseType: 'blob' });
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
         link.setAttribute('download', `RespireX_Report_${resultId}.pdf`);
         document.body.appendChild(link);
         link.click();
-        
         link.parentNode.removeChild(link);
-        window.URL.revokeObjectURL(url);
     } catch (error) {
-        console.error("Download failed:", error);
-        alert("Failed to download report. Please try again.");
+        alert("Failed to download report.");
     } finally {
         setDownloading(false);
     }
   };
 
-  // --- Email Handler ---
   const handleEmailReport = async () => {
-    if (!resultId) {
-      alert("Report ID missing. Cannot send email.");
-      return;
-    }
+    if (!resultId) { alert("Report ID missing."); return; }
     try {
       setEmailing(true);
-      // NOTE: Using POST to match standard backend action behavior. 
-      // Ensure your backend view (EmailReportView) accepts POST requests.
       await api.post(`/email-report/${resultId}/`);
-      alert("Success! The report has been emailed to you.");
+      alert(language === 'hi' ? "सफलता! रिपोर्ट आपको ईमेल कर दी गई है।" : "Success! The report has been emailed to you.");
     } catch (error) {
-      console.error("Email failed:", error);
-      alert("Failed to send email. Please try again.");
+      alert("Failed to send email.");
     } finally {
       setEmailing(false);
     }
@@ -135,6 +187,8 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
         user={user}
         onLogout={onLogout}
         userType="patient"
+        language={language}
+        toggleLanguage={toggleLanguage}
       />
 
       <div className="pt-32 pb-20 px-6">
@@ -146,11 +200,11 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
               <span className={`text-sm font-semibold ${
                 detected ? 'text-orange-600' : 'text-green-600'
               }`}>
-                Analysis Complete
+                {currentT.analysisComplete}
               </span>
             </div>
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">Your Test Results</h1>
-            <p className="text-xl text-gray-600">Completed on {uploadDate}</p>
+            <h1 className="text-5xl font-bold text-gray-900 mb-4">{currentT.yourResults}</h1>
+            <p className="text-xl text-gray-600">{currentT.completedOn} {uploadDate}</p>
           </div>
 
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 mb-8 text-center animate-scale">
@@ -159,31 +213,31 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
                 <div className="w-28 h-28 bg-gradient-to-br from-green-400 to-green-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl animate-pulse">
                   <CheckCircle className="w-16 h-16 text-white" strokeWidth={2.5} />
                 </div>
-                <h2 className="text-4xl font-bold text-gray-900 mb-4">No TB Signs Detected</h2>
-                <p className="text-lg text-gray-600 mb-8">Your X-ray analysis shows no signs of tuberculosis</p>
+                <h2 className="text-4xl font-bold text-gray-900 mb-4">{currentT.noTbDetected}</h2>
+                <p className="text-lg text-gray-600 mb-8">{currentT.noTbDesc}</p>
               </>
             ) : (
               <>
                 <div className="w-28 h-28 bg-gradient-to-br from-orange-400 to-orange-500 rounded-full flex items-center justify-center mx-auto mb-8 shadow-2xl">
                   <AlertTriangle className="w-16 h-16 text-white" strokeWidth={2.5} />
                 </div>
-                <h2 className="text-4xl font-bold text-gray-900 mb-4">TB Signs Detected</h2>
-                <p className="text-lg text-gray-600 mb-8">Please consult a healthcare professional immediately</p>
+                <h2 className="text-4xl font-bold text-gray-900 mb-4">{currentT.tbDetected}</h2>
+                <p className="text-lg text-gray-600 mb-8">{currentT.tbDesc}</p>
               </>
             )}
             
             <div className="flex items-center justify-center space-x-8 mb-8">
               <div className="flex flex-col items-center">
-                <p className="text-gray-600 mb-2">Model Confidence</p>
+                <p className="text-gray-600 mb-2">{currentT.confidence}</p>
                 <p className="text-5xl font-bold text-gray-900">{Math.round(modelConfidence)}%</p>
                 
                 <div className="mt-4 flex flex-col space-y-1 text-sm bg-gray-50 p-3 rounded-lg border border-gray-100 w-48">
                    <div className="flex justify-between w-full">
-                      <span className="text-gray-500">Symptoms:</span>
+                      <span className="text-gray-500">{currentT.symptoms}:</span>
                       <span className="font-semibold text-gray-800">{Math.round(symptomScore)}%</span>
                    </div>
                    <div className="flex justify-between w-full border-t border-gray-200 pt-1 mt-1">
-                      <span className="text-gray-500">Combined:</span>
+                      <span className="text-gray-500">{currentT.combined}:</span>
                       <span className="font-semibold text-blue-600">{Math.round(meanScore)}%</span>
                    </div>
                 </div>
@@ -192,7 +246,7 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
               <div className="h-24 w-px bg-gray-200"></div>
 
               <div>
-                <p className="text-gray-600 mb-2">Risk Level</p>
+                <p className="text-gray-600 mb-2">{currentT.risk}</p>
                 <div className={`inline-block px-8 py-3 rounded-full font-bold text-lg ${
                   riskLevel === 'High' ? 'bg-red-100 text-red-700' :
                   riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
@@ -216,7 +270,7 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
                 ) : (
                     <Download className="w-5 h-5" />
                 )}
-                <span>{downloading ? 'Downloading...' : 'Download PDF'}</span>
+                <span>{downloading ? currentT.downloading : currentT.download}</span>
               </button>
 
               {/* --- EMAIL BUTTON --- */}
@@ -230,16 +284,15 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
                 ) : (
                     <Mail className="w-5 h-5 text-blue-600" />
                 )}
-                <span>{emailing ? 'Sending...' : 'Email Report'}</span>
+                <span>{emailing ? currentT.sending : currentT.email}</span>
               </button>
-              {/* ------------------- */}
 
               <button 
                 onClick={handleShare}
                 className="flex items-center space-x-2 px-6 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold shadow-lg"
               >
                 <Share2 className="w-5 h-5" />
-                <span>Share</span>
+                <span>{currentT.share}</span>
               </button>
             </div>
 
@@ -247,7 +300,7 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
 
           {xrayImage && (
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 mb-8 animate-fade-in stagger-1">
-              <h3 className="text-2xl font-bold text-gray-900 mb-6">Analyzed X-Ray</h3>
+              <h3 className="text-2xl font-bold text-gray-900 mb-6">{currentT.analyzedXray}</h3>
               <div className="rounded-xl overflow-hidden border-2 border-gray-200">
                 <img 
                   src={xrayImage} 
@@ -262,29 +315,29 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
             <div className="bg-white rounded-2xl shadow-lg border border-gray-100 p-8 animate-fade-in stagger-2">
               <h3 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
                 <FileText className="w-7 h-7 text-blue-600" />
-                <span>Recommendations</span>
+                <span>{currentT.recommendations}</span>
               </h3>
               <div className="space-y-4">
                 {detected ? (
                   <>
                     <div className="flex items-start space-x-3">
                       <AlertTriangle className="w-6 h-6 text-orange-500 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                      <p className="text-gray-700 leading-relaxed">Consult a healthcare professional immediately.</p>
+                      <p className="text-gray-700 leading-relaxed">{currentT.consultDoc}</p>
                     </div>
                     <div className="flex items-start space-x-3">
                       <AlertTriangle className="w-6 h-6 text-orange-500 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                      <p className="text-gray-700 leading-relaxed">Sputum culture test recommended.</p>
+                      <p className="text-gray-700 leading-relaxed">{currentT.sputumTest}</p>
                     </div>
                   </>
                 ) : (
                   <>
                     <div className="flex items-start space-x-3">
                       <CheckCircle className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                      <p className="text-gray-700 leading-relaxed">Maintain good hygiene and immunity.</p>
+                      <p className="text-gray-700 leading-relaxed">{currentT.hygiene}</p>
                     </div>
                     <div className="flex items-start space-x-3">
                       <CheckCircle className="w-6 h-6 text-green-500 mt-0.5 flex-shrink-0" strokeWidth={2} />
-                      <p className="text-gray-700 leading-relaxed">Routine check-up in 6 months.</p>
+                      <p className="text-gray-700 leading-relaxed">{currentT.checkup}</p>
                     </div>
                   </>
                 )}
@@ -301,7 +354,7 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
                   detected ? 'text-orange-900' : 'text-green-900'
                 }`}>
                   <Pill className={`w-6 h-6 ${detected ? 'text-orange-600' : 'text-green-600'}`} />
-                  Suggested Medications
+                  {currentT.medications}
                 </h3>
                 <Activity className={`w-6 h-6 ${detected ? 'text-orange-400' : 'text-green-400'}`} />
               </div>
@@ -333,7 +386,7 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
               </ul>
 
               <div className="mt-6 pt-4 border-t border-gray-200 text-xs text-gray-500 text-center">
-                ⚠ AI Generated Recommendation. <br/> This is NOT a medical prescription.
+                {currentT.aiWarning}
               </div>
             </div>
           </div>
@@ -342,11 +395,9 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
             <div className="flex items-start space-x-4">
               <AlertTriangle className="w-8 h-8 text-yellow-600 flex-shrink-0 mt-1" />
               <div>
-                <h4 className="font-bold text-gray-900 text-xl mb-3">Important Disclaimer</h4>
+                <h4 className="font-bold text-gray-900 text-xl mb-3">{currentT.disclaimerTitle}</h4>
                 <p className="text-gray-700 leading-relaxed">
-                  This tool helps in early detection but does not replace a doctor. 
-                  The medications listed above are standard protocols for reference only.
-                  Do not consume any medication without a verified prescription from a certified medical practitioner.
+                  {currentT.disclaimerText}
                 </p>
               </div>
             </div>
@@ -358,14 +409,14 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
               className="flex-1 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 font-semibold text-lg shadow-lg hover:shadow-xl btn-primary flex items-center justify-center space-x-2"
             >
               <Home className="w-5 h-5" />
-              <span>Back to Home</span>
+              <span>{currentT.backHome}</span>
             </button>
             <button
               onClick={() => onNavigate('test-history')}
               className="flex-1 py-4 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 font-semibold text-lg flex items-center justify-center space-x-2 transition"
             >
               <FileText className="w-5 h-5" />
-              <span>View History</span>
+              <span>{currentT.viewHistory}</span>
             </button>
           </div>
         </div>
