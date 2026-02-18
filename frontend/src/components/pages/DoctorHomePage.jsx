@@ -253,7 +253,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-cyan-50 flex flex-col">
-      <Navbar onLogout={onLogout} userType="doctor" user={user} isLoggedIn={true} onNavigate={onNavigate} displayName={doctorName ? `Dr. ${doctorName}` : 'Doctor'} />
+      <Navbar onLogout={onLogout} userType="doctor" user={user} isLoggedIn={true} onNavigate={onNavigate} displayName={doctorName ? `Dr. ${doctorName}` : 'Doctor' darkMode = {darkMode} toggleTheme = {toggleTheme} } />
       
       {/* Modals are now rendered here but defined outside */}
       <PatientDetailsModal 
