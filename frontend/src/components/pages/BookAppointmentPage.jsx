@@ -4,12 +4,12 @@ import api from '../../lib/api';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
-const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', toggleLanguage }) => {
+const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', toggleLanguage, darkMode, toggleTheme }) => {
   const [doctors, setDoctors] = useState([]);
   const [formData, setFormData] = useState({ doctor_id: '', date_time: '', reason: '' });
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [bookingSuccess, setBookingSuccess] = useState(false); // <--- New State
+  const [bookingSuccess, setBookingSuccess] = useState(false);
 
   const t = {
     en: {
@@ -24,8 +24,6 @@ const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', togg
       btnSubmit: "Confirm Booking",
       btnProcessing: "Processing...",
       disclaimer: "By booking, you agree to our telemedicine terms. Emergencies should be handled at a local hospital.",
-      
-      // Success Screen Translations
       successTitle: "Booking Successful!",
       successMsg: "Your appointment request has been sent successfully. The doctor will review and confirm it shortly.",
       goHome: "Go to Dashboard"
@@ -42,8 +40,6 @@ const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', togg
       btnSubmit: "बुकिंग की पुष्टि करें",
       btnProcessing: "प्रक्रिया जारी है...",
       disclaimer: "बुकिंग करके, आप हमारी टेलीमेडिसिन शर्तों से सहमत होते हैं। आपात स्थिति को स्थानीय अस्पताल में संभाला जाना चाहिए।",
-      
-      // Success Screen Translations
       successTitle: "बुकिंग सफल रही!",
       successMsg: "आपका अपॉइंटमेंट अनुरोध सफलतापूर्वक भेज दिया गया है। डॉक्टर जल्द ही इसकी समीक्षा करेंगे और पुष्टि करेंगे।",
       goHome: "डैशबोर्ड पर जाएं"
@@ -71,7 +67,6 @@ const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', togg
     setSubmitting(true);
     try {
       await api.post('/appointments/', formData);
-      // Instead of alerting and navigating away, we show the success view
       setBookingSuccess(true); 
     } catch (err) {
       alert('Error booking appointment. Please try again.');
@@ -81,64 +76,61 @@ const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', togg
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
-      <Navbar isLoggedIn={true} user={user} onLogout={onLogout} onNavigate={onNavigate} language={language} toggleLanguage={toggleLanguage} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex flex-col transition-colors">
+      <Navbar isLoggedIn={true} user={user} onLogout={onLogout} onNavigate={onNavigate} language={language} toggleLanguage={toggleLanguage} darkMode={darkMode} toggleTheme={toggleTheme} />
 
       <div className="flex-grow pt-28 pb-12 px-4 sm:px-6">
         <div className="max-w-3xl mx-auto">
           
-          {/* Back Button (Only show if NOT success mode) */}
           {!bookingSuccess && (
             <button 
               onClick={() => onNavigate('patient-home')}
-              className="flex items-center text-gray-500 hover:text-gray-900 transition mb-6"
+              className="flex items-center text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition mb-6"
             >
               <ArrowLeft className="w-5 h-5 mr-2" />
               {currentT.back}
             </button>
           )}
 
-          {/* --- SUCCESS VIEW --- */}
           {bookingSuccess ? (
-             <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-12 text-center animate-scale">
-                <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
-                    <CheckCircle className="w-12 h-12 text-green-600" strokeWidth={3} />
+             <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 p-12 text-center animate-scale">
+                <div className="w-24 h-24 bg-green-100 dark:bg-green-900/50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                    <CheckCircle className="w-12 h-12 text-green-600 dark:text-green-400" strokeWidth={3} />
                 </div>
-                <h2 className="text-4xl font-bold text-gray-900 mb-4">{currentT.successTitle}</h2>
-                <p className="text-xl text-gray-600 mb-10 max-w-lg mx-auto">
+                <h2 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">{currentT.successTitle}</h2>
+                <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 max-w-lg mx-auto">
                     {currentT.successMsg}
                 </p>
                 <button
                     onClick={() => onNavigate('patient-home')}
-                    className="inline-flex items-center px-8 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold text-lg shadow-lg hover:shadow-xl"
+                    className="inline-flex items-center px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-800 dark:hover:bg-gray-200 transition font-semibold text-lg shadow-lg hover:shadow-xl"
                 >
                     <Home className="w-5 h-5 mr-2" />
                     <span>{currentT.goHome}</span>
                 </button>
              </div>
           ) : (
-             /* --- BOOKING FORM VIEW --- */
              <>
                 <div className="text-center mb-10 animate-fade-in">
-                    <div className="inline-flex items-center justify-center p-3 bg-blue-100 rounded-2xl mb-4">
-                        <Stethoscope className="w-8 h-8 text-blue-600" />
+                    <div className="inline-flex items-center justify-center p-3 bg-blue-100 dark:bg-blue-900/50 rounded-2xl mb-4">
+                        <Stethoscope className="w-8 h-8 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <h1 className="text-4xl font-bold text-gray-900 mb-3">{currentT.title}</h1>
-                    <p className="text-lg text-gray-600">{currentT.subtitle}</p>
+                    <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3">{currentT.title}</h1>
+                    <p className="text-lg text-gray-600 dark:text-gray-300">{currentT.subtitle}</p>
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden animate-fade-in stagger-1">
+                <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden animate-fade-in stagger-1">
                     <div className="p-8 md:p-10">
                         <form onSubmit={handleSubmit} className="space-y-8">
                             
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2 pl-1">{currentT.selectDoc}</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 pl-1">{currentT.selectDoc}</label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <User className="h-5 w-5 text-gray-400" />
                                     </div>
                                     <select 
-                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none appearance-none text-gray-700"
+                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none appearance-none text-gray-700 dark:text-white"
                                         onChange={(e) => setFormData({...formData, doctor_id: e.target.value})}
                                         required
                                     >
@@ -156,14 +148,14 @@ const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', togg
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2 pl-1">{currentT.dateLabel}</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 pl-1">{currentT.dateLabel}</label>
                                 <div className="relative">
                                     <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                         <Calendar className="h-5 w-5 text-gray-400" />
                                     </div>
                                     <input 
                                         type="datetime-local" 
-                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-700"
+                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none text-gray-700 dark:text-white"
                                         onChange={(e) => setFormData({...formData, date_time: e.target.value})}
                                         required
                                     />
@@ -171,13 +163,13 @@ const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', togg
                             </div>
 
                             <div>
-                                <label className="block text-sm font-semibold text-gray-700 mb-2 pl-1">{currentT.reasonLabel}</label>
+                                <label className="block text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2 pl-1">{currentT.reasonLabel}</label>
                                 <div className="relative">
                                     <div className="absolute top-4 left-4 pointer-events-none">
                                         <FileText className="h-5 w-5 text-gray-400" />
                                     </div>
                                     <textarea 
-                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none min-h-[120px] text-gray-700"
+                                        className="w-full pl-12 pr-4 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all outline-none min-h-[120px] text-gray-700 dark:text-white"
                                         rows="3"
                                         onChange={(e) => setFormData({...formData, reason: e.target.value})}
                                         placeholder={currentT.reasonPlaceholder}
@@ -197,8 +189,8 @@ const BookAppointmentPage = ({ onNavigate, user, onLogout, language = 'en', togg
                         </form>
                     </div>
                     
-                    <div className="bg-gray-50 px-8 py-4 border-t border-gray-100">
-                        <p className="text-xs text-center text-gray-500">
+                    <div className="bg-gray-50 dark:bg-gray-700/50 px-8 py-4 border-t border-gray-100 dark:border-gray-700">
+                        <p className="text-xs text-center text-gray-500 dark:text-gray-400">
                             {currentT.disclaimer}
                         </p>
                     </div>
