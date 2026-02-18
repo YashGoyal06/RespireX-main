@@ -6,27 +6,6 @@ import Footer from '../common/Footer';
 // Receive Theme Props from App.jsx
 const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLanguage }) => { 
   
-  // Use context (in real apps) or just rely on CSS inheritance if passing simple props isn't enough.
-  // But wait! App.jsx passes toggleTheme to Navbar, but PatientHomePage needs to pass it DOWN to Navbar.
-  // Since App.jsx is the parent, it manages the state. 
-  // We need to receive 'darkMode' and 'toggleTheme' here to pass them to Navbar.
-  // NOTE: In the App.jsx above, I forgot to pass toggleTheme to PatientHomePage.
-  // **Ideally**, Navbar should be inside App.jsx or use Context. 
-  // BUT, since we are doing prop drilling:
-  // I will assume App.jsx passes them (it wasn't in the App.jsx code block above, but I'll assume you add it or I rely on the global wrapper).
-  // Actually, Navbar is rendered INSIDE PatientHomePage. So PatientHomePage MUST receive these props.
-  // To keep it simple and consistent with previous turns:
-  // I will assume you will update App.jsx to pass `darkMode={darkMode} toggleTheme={toggleTheme}` to <PatientHomePage /> as well.
-  
-  // Wait, I actually DID NOT pass them in App.jsx in the previous step (my bad). 
-  // However, the Navbar inside PatientHomePage is what matters.
-  // I will assume the Navbar here uses a Context or you update App.jsx. 
-  // actually, to be safe, I will update PatientHomePage to ACCEPT them, 
-  // but usually Navbar is global in App.jsx. 
-  // Ah, looking at your App.jsx, PatientHomePage renders its OWN Navbar. 
-  // So yes, App.jsx must pass these props to PatientHomePage.
-  
-  // Translations (same as before)
   const t = {
     en: {
       welcome: "Welcome Back",
@@ -91,11 +70,8 @@ const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
         onNavigate={onNavigate} 
         language={language}
         toggleLanguage={toggleLanguage}
-        // Note: You need to update App.jsx to pass darkMode/toggleTheme to <PatientHomePage /> 
-        // and then pass them here: darkMode={darkMode} toggleTheme={toggleTheme}
-        // For now, I'm just adding the Navbar code. The App.jsx provided earlier handles global context 
-        // via the Wrapper, but for the Navbar button to work INSIDE this page, props are needed.
-        // Assuming you updated App.jsx's <PatientHomePage> call to include these props.
+        darkMode={darkMode}
+        toggleTheme={toggleTheme}
       />
 
       {/* Main Content */}
