@@ -135,7 +135,9 @@ const App = () => {
   const renderPage = () => {
     // --- WE MUST PASS darkMode AND toggleTheme TO ALL PAGES ---
     switch (currentPage) {
-      case 'landing': return <LandingPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      case 'landing': 
+        return <LandingPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} 
+               darkMode={darkMode} toggleTheme={toggleTheme} language={language} toggleLanguage={toggleLanguage} />;
       case 'login': return <LoginPage onNavigate={handleNavigate} />;
       case 'signup': return <SignupPage onNavigate={handleNavigate} />;
       case 'doctor-signup': return <DoctorSignup onNavigate={handleNavigate} />;
