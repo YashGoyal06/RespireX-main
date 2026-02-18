@@ -5,7 +5,7 @@ import Footer from '../common/Footer';
 import api from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 
-const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLanguage }) => {
+const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLanguage, darkMode, toggleTheme }) => {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -142,12 +142,12 @@ const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors">
+        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} darkMode={darkMode} toggleTheme={toggleTheme} />
         <div className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 font-medium">{currentT.loading}</p>
+            <p className="text-gray-600 dark:text-gray-300 font-medium">{currentT.loading}</p>
           </div>
         </div>
       </div>
@@ -156,16 +156,16 @@ const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} />
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex flex-col transition-colors">
+        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} darkMode={darkMode} toggleTheme={toggleTheme} />
         <div className="flex-grow flex items-center justify-center px-4">
-          <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
+          <div className="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-lg max-w-md w-full text-center border dark:border-gray-700">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">{currentT.errorTitle}</h3>
-            <p className="text-gray-600 mb-6">{error}</p>
+            <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2">{currentT.errorTitle}</h3>
+            <p className="text-gray-600 dark:text-gray-300 mb-6">{error}</p>
             <div className="flex space-x-4">
               <button onClick={fetchTestHistory} className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">{currentT.tryAgain}</button>
-              <button onClick={() => onNavigate('patient-home')} className="flex-1 px-6 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition">{currentT.goBack}</button>
+              <button onClick={() => onNavigate('patient-home')} className="flex-1 px-6 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 transition">{currentT.goBack}</button>
             </div>
           </div>
         </div>
@@ -174,14 +174,14 @@ const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
-      <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 flex flex-col transition-colors">
+      <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} darkMode={darkMode} toggleTheme={toggleTheme} />
 
       <div className="flex-grow pt-32 pb-20 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="mb-12 animate-fade-in">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">{currentT.title}</h1>
-            <p className="text-xl text-gray-600">{currentT.subtitle}</p>
+            <h1 className="text-5xl font-bold text-gray-900 dark:text-white mb-4">{currentT.title}</h1>
+            <p className="text-xl text-gray-600 dark:text-gray-300">{currentT.subtitle}</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">
@@ -190,14 +190,14 @@ const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
               { label: currentT.negativeResults, value: tests.filter(t => t.result.toLowerCase() === "negative").length, icon: CheckCircle, color: "green" },
               { label: currentT.avgConfidence, value: tests.length > 0 ? `${Math.round(tests.reduce((a, b) => a + b.confidence, 0) / tests.length)}%` : "0%", icon: Activity, color: "purple" }
             ].map((stat, idx) => (
-              <div key={idx} className={`bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover-lift animate-fade-in stagger-${idx + 1}`}>
+              <div key={idx} className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 p-6 hover-lift animate-fade-in stagger-${idx + 1}`}>
                 <div className="flex items-center justify-between mb-4">
-                  <div className={`w-12 h-12 bg-gradient-to-br from-${stat.color}-100 to-${stat.color}-200 rounded-xl flex items-center justify-center`}>
-                    <stat.icon className={`w-6 h-6 text-${stat.color}-600`} strokeWidth={2} />
+                  <div className={`w-12 h-12 bg-gradient-to-br from-${stat.color}-100 to-${stat.color}-200 dark:from-${stat.color}-900 dark:to-${stat.color}-800 rounded-xl flex items-center justify-center`}>
+                    <stat.icon className={`w-6 h-6 text-${stat.color}-600 dark:text-${stat.color}-300`} strokeWidth={2} />
                   </div>
-                  <span className="text-4xl font-bold text-gray-900">{stat.value}</span>
+                  <span className="text-4xl font-bold text-gray-900 dark:text-white">{stat.value}</span>
                 </div>
-                <p className="text-sm font-semibold text-gray-600">{stat.label}</p>
+                <p className="text-sm font-semibold text-gray-600 dark:text-gray-400">{stat.label}</p>
               </div>
             ))}
           </div>
@@ -205,7 +205,7 @@ const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
           <div className="space-y-6">
             {tests.length > 0 ? (
               tests.map((test, idx) => (
-                <div key={test.id} className={`bg-white rounded-2xl shadow-lg border border-gray-100 overflow-hidden hover-lift animate-fade-in stagger-${idx + 1}`}>
+                <div key={test.id} className={`bg-white dark:bg-gray-800 rounded-2xl shadow-lg border border-gray-100 dark:border-gray-700 overflow-hidden hover-lift animate-fade-in stagger-${idx + 1}`}>
                   <div className="p-8">
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-start space-x-6">
@@ -219,8 +219,8 @@ const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
                            )}
                         </div>
                         <div>
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{test.result} {currentT.result}</h3>
-                          <div className="flex items-center space-x-4 text-gray-600">
+                          <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">{test.result} {currentT.result}</h3>
+                          <div className="flex items-center space-x-4 text-gray-600 dark:text-gray-400">
                             <div className="flex items-center space-x-2">
                               <Calendar className="w-5 h-5" />
                               <span className="font-medium">{test.fullDate}</span>
@@ -231,58 +231,58 @@ const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLa
                       <button 
                         onClick={() => handleDownload(test)}
                         disabled={downloadingId === test.id}
-                        className="px-6 py-3 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="px-6 py-3 bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {downloadingId === test.id ? <Loader className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
                         <span>{downloadingId === test.id ? currentT.pdf : currentT.download}</span>
                       </button>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-6 pt-6 border-t border-gray-100">
+                    <div className="grid md:grid-cols-3 gap-6 pt-6 border-t border-gray-100 dark:border-gray-700">
                       <div>
-                        <p className="text-sm text-gray-600 mb-2">{currentT.confidence}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{currentT.confidence}</p>
                         <div className="flex items-center space-x-3">
-                          <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
+                          <div className="flex-1 bg-gray-200 dark:bg-gray-600 rounded-full h-3 overflow-hidden">
                             <div className={`h-3 rounded-full transition-all ${
                                 test.confidence > 80 ? 'bg-gradient-to-r from-green-500 to-green-600' : 'bg-gradient-to-r from-yellow-500 to-orange-600'
                               }`}
                               style={{ width: `${test.confidence}%` }}
                             />
                           </div>
-                          <span className="text-lg font-bold text-gray-900">{test.confidence}%</span>
+                          <span className="text-lg font-bold text-gray-900 dark:text-white">{test.confidence}%</span>
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 mb-2">{currentT.risk}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{currentT.risk}</p>
                         <div className={`inline-block px-6 py-2 rounded-xl font-bold ${
-                          test.riskLevel === 'High' ? 'bg-red-100 text-red-700' :
-                          test.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-green-100 text-green-700'
+                          test.riskLevel === 'High' ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' :
+                          test.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300' :
+                          'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300'
                         }`}>
                           {test.riskLevel}
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 mb-2">{currentT.status}</p>
-                        <div className="inline-block px-6 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold">{currentT.completed}</div>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">{currentT.status}</p>
+                        <div className="inline-block px-6 py-2 bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300 rounded-xl font-bold">{currentT.completed}</div>
                       </div>
                     </div>
                   </div>
                 </div>
               ))
             ) : (
-              <div className="bg-white rounded-3xl shadow-xl border border-gray-100 p-16 text-center">
-                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                  <FileText className="w-12 h-12 text-gray-400" />
+              <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-xl border border-gray-100 dark:border-gray-700 p-16 text-center">
+                <div className="w-24 h-24 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">{currentT.noHistory}</h3>
-                <p className="text-gray-600 mb-8">{currentT.noHistoryDesc}</p>
-                <button onClick={() => onNavigate('symptom-test')} className="px-10 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary">{currentT.startTest}</button>
+                <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-4">{currentT.noHistory}</h3>
+                <p className="text-gray-600 dark:text-gray-400 mb-8">{currentT.noHistoryDesc}</p>
+                <button onClick={() => onNavigate('symptom-test')} className="px-10 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl hover:bg-gray-800 dark:hover:bg-gray-200 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary">{currentT.startTest}</button>
               </div>
             )}
           </div>
           {tests.length > 0 && (
-            <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-8 text-white animate-fade-in">
+            <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-8 text-white animate-fade-in shadow-lg">
               <h3 className="text-2xl font-bold mb-4">{currentT.keepTrack}</h3>
               <p className="text-lg leading-relaxed opacity-90">{currentT.keepTrackDesc}</p>
             </div>
