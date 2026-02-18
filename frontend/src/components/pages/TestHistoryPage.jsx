@@ -5,11 +5,62 @@ import Footer from '../common/Footer';
 import api from '../../lib/api';
 import { supabase } from '../../lib/supabase';
 
-const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
+const TestHistoryPage = ({ onNavigate, onLogout, user, language = 'en', toggleLanguage }) => {
   const [tests, setTests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
+
+  const t = {
+    en: {
+      title: "Test History",
+      subtitle: "View all your previous screening results",
+      totalTests: "Total Tests",
+      negativeResults: "Negative Results",
+      avgConfidence: "Avg. Confidence",
+      noHistory: "No Test History Yet",
+      noHistoryDesc: "Start your first TB screening test to see results here",
+      startTest: "Start Test",
+      keepTrack: "Keep Track of Your Health",
+      keepTrackDesc: "Regular screening helps in early detection and better health outcomes.",
+      loading: "Loading your history...",
+      errorTitle: "Error Loading Data",
+      tryAgain: "Try Again",
+      goBack: "Go Back",
+      result: "Result",
+      confidence: "Confidence Level",
+      risk: "Risk Level",
+      status: "Test Status",
+      completed: "Completed",
+      download: "Download",
+      pdf: "PDF..."
+    },
+    hi: {
+      title: "टेस्ट इतिहास",
+      subtitle: "अपने सभी पिछले स्क्रीनिंग परिणाम देखें",
+      totalTests: "कुल टेस्ट",
+      negativeResults: "नकारात्मक परिणाम",
+      avgConfidence: "औसत आत्मविश्वास",
+      noHistory: "अभी तक कोई टेस्ट इतिहास नहीं",
+      noHistoryDesc: "परिणाम देखने के लिए अपना पहला टीबी स्क्रीनिंग टेस्ट शुरू करें",
+      startTest: "टेस्ट शुरू करें",
+      keepTrack: "अपने स्वास्थ्य पर नज़र रखें",
+      keepTrackDesc: "नियमित स्क्रीनिंग प्रारंभिक पहचान और बेहतर स्वास्थ्य परिणामों में मदद करती है।",
+      loading: "आपका इतिहास लोड हो रहा है...",
+      errorTitle: "डेटा लोड करने में त्रुटि",
+      tryAgain: "पुनः प्रयास करें",
+      goBack: "वापस जाएं",
+      result: "परिणाम",
+      confidence: "आत्मविश्वास स्तर",
+      risk: "जोखिम स्तर",
+      status: "टेस्ट स्थिति",
+      completed: "पूर्ण",
+      download: "डाउनलोड",
+      pdf: "पीडीएफ..."
+    }
+  };
+
+  const currentT = t[language];
 
   useEffect(() => {
     fetchTestHistory();
@@ -30,49 +81,33 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
       const response = await api.get('/history/');
       
       const formattedData = response.data.map(test => {
-        // --- ROBUST LOGIC FIX ---
-        
-        // 1. Normalize the result string to handle "Positive", "positive", "POSITIVE "
         const rawResult = test.result || '';
         const isPositive = rawResult.trim().toLowerCase() === 'positive';
         
-        // 2. Handle Confidence (convert 0.53 -> 53 if needed)
-        // Checks if score is 0-1 range (like 0.85) or 0-100 range (like 85.0)
         const confidence = test.confidence_score > 1 
           ? Math.round(test.confidence_score) 
           : Math.round(test.confidence_score * 100);
 
-        // 3. Force Recalculate Risk Level
         let calculatedRisk = 'Low'; 
-
         if (isPositive) {
-            if (confidence > 80) {
-                calculatedRisk = 'High';
-            } else if (confidence >= 50) {
-                calculatedRisk = 'Medium';
-            } else {
-                calculatedRisk = 'Low';
-            }
-        } else {
-            // If Negative, Risk is ALWAYS Low, regardless of confidence
-            calculatedRisk = 'Low';
+            if (confidence > 80) calculatedRisk = 'High';
+            else if (confidence >= 50) calculatedRisk = 'Medium';
         }
-        // ------------------------
 
         return {
           id: test.id,
-          date: new Date(test.date_tested).toLocaleDateString('en-US', { 
+          date: new Date(test.date_tested).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', { 
             month: 'short', 
             day: 'numeric', 
             year: 'numeric' 
           }),
-          fullDate: new Date(test.date_tested).toLocaleString('en-US', { 
+          fullDate: new Date(test.date_tested).toLocaleString(language === 'hi' ? 'hi-IN' : 'en-US', { 
             dateStyle: 'long', 
             timeStyle: 'short' 
           }),
           result: test.result || 'Unknown',
           confidence: confidence,
-          riskLevel: calculatedRisk, // Uses the robust calculated value
+          riskLevel: calculatedRisk,
           xrayUrl: test.xray_image_url || null
         };
       });
@@ -81,13 +116,7 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
       
     } catch (err) {
       console.error("Failed to fetch history:", err);
-      if (err.response?.status === 401) {
-        setError("Session expired. Please log in again.");
-      } else if (err.response?.status === 404) {
-        setError("History endpoint not found. Please check backend configuration.");
-      } else {
-        setError(err.response?.data?.error || "Could not load test history. Please try again later.");
-      }
+      setError("Could not load test history.");
     } finally {
       setLoading(false);
     }
@@ -96,22 +125,16 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
   const handleDownload = async (test) => {
     try {
       setDownloadingId(test.id); 
-      const response = await api.get(`/report/${test.id}/`, {
-          responseType: 'blob' 
-      });
-
+      const response = await api.get(`/report/${test.id}/`, { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([response.data]));
       const link = document.createElement('a');
       link.href = url;
       link.setAttribute('download', `RespireX_Report_${test.id}.pdf`);
       document.body.appendChild(link);
       link.click();
-      
       link.parentNode.removeChild(link);
-      window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Download failed:", error);
-      alert("Failed to download PDF report. Please try again.");
+      alert("Failed to download PDF report.");
     } finally {
       setDownloadingId(null);
     }
@@ -120,11 +143,11 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" />
+        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} />
         <div className="flex-grow flex items-center justify-center">
           <div className="text-center">
             <Loader className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-            <p className="text-gray-600 font-medium">Loading your history...</p>
+            <p className="text-gray-600 font-medium">{currentT.loading}</p>
           </div>
         </div>
       </div>
@@ -134,15 +157,15 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col">
-        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" />
+        <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} />
         <div className="flex-grow flex items-center justify-center px-4">
           <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-gray-900 mb-2">Error Loading Data</h3>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">{currentT.errorTitle}</h3>
             <p className="text-gray-600 mb-6">{error}</p>
             <div className="flex space-x-4">
-              <button onClick={fetchTestHistory} className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">Try Again</button>
-              <button onClick={() => onNavigate('patient-home')} className="flex-1 px-6 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition">Go Back</button>
+              <button onClick={fetchTestHistory} className="flex-1 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition">{currentT.tryAgain}</button>
+              <button onClick={() => onNavigate('patient-home')} className="flex-1 px-6 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition">{currentT.goBack}</button>
             </div>
           </div>
         </div>
@@ -152,20 +175,20 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
-      <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" />
+      <Navbar showBackButton={true} onBack={() => onNavigate('patient-home')} isLoggedIn={true} user={user} onLogout={onLogout} userType="patient" language={language} toggleLanguage={toggleLanguage} />
 
       <div className="flex-grow pt-32 pb-20 px-6">
         <div className="max-w-5xl mx-auto">
           <div className="mb-12 animate-fade-in">
-            <h1 className="text-5xl font-bold text-gray-900 mb-4">Test History</h1>
-            <p className="text-xl text-gray-600">View all your previous screening results</p>
+            <h1 className="text-5xl font-bold text-gray-900 mb-4">{currentT.title}</h1>
+            <p className="text-xl text-gray-600">{currentT.subtitle}</p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 mb-12">
             {[
-              { label: "Total Tests", value: tests.length, icon: FileText, color: "blue" },
-              { label: "Negative Results", value: tests.filter(t => t.result.toLowerCase() === "negative").length, icon: CheckCircle, color: "green" },
-              { label: "Avg. Confidence", value: tests.length > 0 ? `${Math.round(tests.reduce((a, b) => a + b.confidence, 0) / tests.length)}%` : "0%", icon: Activity, color: "purple" }
+              { label: currentT.totalTests, value: tests.length, icon: FileText, color: "blue" },
+              { label: currentT.negativeResults, value: tests.filter(t => t.result.toLowerCase() === "negative").length, icon: CheckCircle, color: "green" },
+              { label: currentT.avgConfidence, value: tests.length > 0 ? `${Math.round(tests.reduce((a, b) => a + b.confidence, 0) / tests.length)}%` : "0%", icon: Activity, color: "purple" }
             ].map((stat, idx) => (
               <div key={idx} className={`bg-white rounded-2xl shadow-lg border border-gray-100 p-6 hover-lift animate-fade-in stagger-${idx + 1}`}>
                 <div className="flex items-center justify-between mb-4">
@@ -187,7 +210,6 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                     <div className="flex items-start justify-between mb-6">
                       <div className="flex items-start space-x-6">
                         <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0 ${
-                          // Ensure color logic also uses the robust lowercase check
                           String(test.result).toLowerCase() === 'positive' ? 'bg-gradient-to-br from-red-400 to-red-500' : 'bg-gradient-to-br from-green-400 to-green-500'
                         }`}>
                            {String(test.result).toLowerCase() === 'positive' ? (
@@ -197,7 +219,7 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                            )}
                         </div>
                         <div>
-                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{test.result} Result</h3>
+                          <h3 className="text-2xl font-bold text-gray-900 mb-2">{test.result} {currentT.result}</h3>
                           <div className="flex items-center space-x-4 text-gray-600">
                             <div className="flex items-center space-x-2">
                               <Calendar className="w-5 h-5" />
@@ -212,13 +234,13 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                         className="px-6 py-3 bg-gray-100 text-gray-900 rounded-xl hover:bg-gray-200 transition font-semibold flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         {downloadingId === test.id ? <Loader className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
-                        <span>{downloadingId === test.id ? 'PDF...' : 'Download'}</span>
+                        <span>{downloadingId === test.id ? currentT.pdf : currentT.download}</span>
                       </button>
                     </div>
 
                     <div className="grid md:grid-cols-3 gap-6 pt-6 border-t border-gray-100">
                       <div>
-                        <p className="text-sm text-gray-600 mb-2">Confidence Level</p>
+                        <p className="text-sm text-gray-600 mb-2">{currentT.confidence}</p>
                         <div className="flex items-center space-x-3">
                           <div className="flex-1 bg-gray-200 rounded-full h-3 overflow-hidden">
                             <div className={`h-3 rounded-full transition-all ${
@@ -231,7 +253,7 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 mb-2">Risk Level</p>
+                        <p className="text-sm text-gray-600 mb-2">{currentT.risk}</p>
                         <div className={`inline-block px-6 py-2 rounded-xl font-bold ${
                           test.riskLevel === 'High' ? 'bg-red-100 text-red-700' :
                           test.riskLevel === 'Medium' ? 'bg-yellow-100 text-yellow-700' :
@@ -241,8 +263,8 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                         </div>
                       </div>
                       <div>
-                        <p className="text-sm text-gray-600 mb-2">Test Status</p>
-                        <div className="inline-block px-6 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold">Completed</div>
+                        <p className="text-sm text-gray-600 mb-2">{currentT.status}</p>
+                        <div className="inline-block px-6 py-2 bg-blue-100 text-blue-700 rounded-xl font-bold">{currentT.completed}</div>
                       </div>
                     </div>
                   </div>
@@ -253,16 +275,16 @@ const TestHistoryPage = ({ onNavigate, onLogout, user }) => {
                 <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
                   <FileText className="w-12 h-12 text-gray-400" />
                 </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-4">No Test History Yet</h3>
-                <p className="text-gray-600 mb-8">Start your first TB screening test to see results here</p>
-                <button onClick={() => onNavigate('symptom-test')} className="px-10 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary">Start Test</button>
+                <h3 className="text-2xl font-bold text-gray-900 mb-4">{currentT.noHistory}</h3>
+                <p className="text-gray-600 mb-8">{currentT.noHistoryDesc}</p>
+                <button onClick={() => onNavigate('symptom-test')} className="px-10 py-4 bg-gray-900 text-white rounded-xl hover:bg-gray-800 transition font-semibold text-lg shadow-lg hover:shadow-xl btn-primary">{currentT.startTest}</button>
               </div>
             )}
           </div>
           {tests.length > 0 && (
             <div className="mt-12 bg-gradient-to-r from-blue-600 to-cyan-600 rounded-2xl p-8 text-white animate-fade-in">
-              <h3 className="text-2xl font-bold mb-4">Keep Track of Your Health</h3>
-              <p className="text-lg leading-relaxed opacity-90">Regular screening helps in early detection and better health outcomes.</p>
+              <h3 className="text-2xl font-bold mb-4">{currentT.keepTrack}</h3>
+              <p className="text-lg leading-relaxed opacity-90">{currentT.keepTrackDesc}</p>
             </div>
           )}
         </div>
