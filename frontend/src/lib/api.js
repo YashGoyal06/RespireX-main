@@ -6,37 +6,31 @@ const api = axios.create({
   timeout: 120000,
 });
 
-// Store promises, not just keys, so we can return the active promise to duplicates
-const pendingRequests = new Map();
+// Tracks in-flight requests 
+const ongoingRequests = new Set();
 
 api.interceptors.request.use(
   async (config) => {
     const requestKey = `${config.method}-${config.url}`;
 
-    // --- BUG FIX: Shared Promises ---
-    // Instead of cancelling the duplicate, we want to "piggyback" on the existing one.
-    // However, axios interceptors can't easily swap the promise. 
-    // So we stick to the cancellation method BUT we add a specific tag 
-    // that the caller can recognize to ignore the error.
-    // (A true promise-sharing solution requires wrapping the axios call, 
-    // but for now, we will just ensure we don't aggressively block unique params).
-    
-    // For Safety: Only block GET requests (mutations like POST should probably go through)
-    if (config.method === 'get' && pendingRequests.has(requestKey)) {
-        console.log("⏸️ Duplicate GET blocked:", requestKey);
-        const controller = new AbortController();
-        config.signal = controller.signal;
-        controller.abort("DUPLICATE_REQUEST"); // Specific reason
-        return config;
+    // --- SIMPLIFIED DUPLICATE HANDLING ---
+    // We only block non-GET requests (like POST/PUT) to prevent double submissions.
+    // We ALLOW duplicate GET requests (e.g. fetching profile) to prevent race-condition errors.
+    if (config.method !== 'get' && ongoingRequests.has(requestKey)) {
+      console.log("⏸️ Duplicate mutation blocked:", requestKey);
+      const controller = new AbortController();
+      config.signal = controller.signal;
+      controller.abort("DUPLICATE_REQ");
+      return config;
     }
 
-    if (config.method === 'get') {
-        pendingRequests.set(requestKey, true);
+    if (config.method !== 'get') {
+        ongoingRequests.add(requestKey);
         config._requestKey = requestKey;
     }
 
     try {
-      // --- FIX: Increased Timeout to 20s ---
+      // 20s Timeout for slow cold starts
       const sessionPromise = Promise.race([
         supabase.auth.getSession(),
         new Promise((_, reject) =>
@@ -52,8 +46,7 @@ api.interceptors.request.use(
       }
     } catch (error) {
       console.error("❌ Request interceptor error:", error.message);
-      // Clean up if we fail before sending
-      if (config._requestKey) pendingRequests.delete(config._requestKey);
+      if (config._requestKey) ongoingRequests.delete(config._requestKey);
     }
 
     return config;
@@ -66,17 +59,16 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => {
     if (response.config._requestKey) {
-      pendingRequests.delete(response.config._requestKey);
+      ongoingRequests.delete(response.config._requestKey);
     }
     return response;
   },
   async (error) => {
     if (error.config?._requestKey) {
-      pendingRequests.delete(error.config._requestKey);
+      ongoingRequests.delete(error.config._requestKey);
     }
 
-    // Ignore duplicates
-    if (error.message === "DUPLICATE_REQUEST" || axios.isCancel(error)) {
+    if (error.message === "DUPLICATE_REQ" || axios.isCancel(error)) {
         return Promise.reject(error);
     }
 
