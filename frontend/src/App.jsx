@@ -17,7 +17,7 @@ import AppointmentsPage from './components/pages/AppointmentsPage';
 import { supabase } from './lib/supabase';
 import api from './lib/api';
 import { GooeyLoader } from './components/common/GooeyLoader'; 
-import axios from 'axios'; // Import axios for isCancel check
+import axios from 'axios'; 
 
 const App = () => {
   const [currentPage, setCurrentPage] = useState('landing');
@@ -30,13 +30,13 @@ const App = () => {
   useEffect(() => {
     let mounted = true;
     
-    // Timer to prevent infinite loading state
+    // Safety timer: If app hangs for 20s, stop loading but DO NOT change page blindly
     const safetyTimer = setTimeout(() => {
       if (mounted && loading) {
         console.warn("⚠️ Safety timer triggered.");
         setLoading(false);
       }
-    }, 20000); // 20 seconds
+    }, 20000); 
 
     const initApp = async () => {
       if (isCheckingAuth) return;
@@ -49,12 +49,16 @@ const App = () => {
         
         if (session?.user && mounted) {
           setUser(session.user);
+          // PRE-CHECK: If metadata already says doctor, set it immediately
+          if (session.user.user_metadata?.role === 'doctor') {
+             setCurrentPage('doctor-home');
+          }
           await fetchUserRole(session.user);
         } else if (mounted) {
           setLoading(false);
         }
       } catch (error) {
-        console.log("Init session check failed or no session:", error.message);
+        console.log("Init session check failed:", error.message);
         if (mounted) setLoading(false);
       } finally {
         if (mounted) setIsCheckingAuth(false);
@@ -67,7 +71,10 @@ const App = () => {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         if (mounted) {
           setUser(session.user);
-          // Only fetch if we aren't already loading/checking
+          // Trust metadata immediately to prevent UI flicker
+          if (session.user.user_metadata?.role === 'doctor') {
+             setCurrentPage('doctor-home');
+          }
           if (!isCheckingAuth) {
              await fetchUserRole(session.user);
           }
@@ -89,7 +96,7 @@ const App = () => {
   }, []);
 
   const fetchUserRole = async (currentUser) => {
-    // If we are already on the correct page, don't refetch hard
+    // 1. OPTIMIZATION: If we are already on the correct dashboard, stop.
     if (currentPage === 'doctor-home' || currentPage === 'patient-home') {
         setLoading(false);
         return;
@@ -100,49 +107,41 @@ const App = () => {
       const response = await api.get('/profile/');
       const role = response.data.role;
       
+      // STRICT SWITCHING ONLY
       if (role === 'doctor') {
         setCurrentPage('doctor-home');
-      } else {
+      } else if (role === 'patient') {
         setCurrentPage('patient-home');
       }
       setLoading(false);
 
     } catch (err) {
-      // --- CRITICAL FIX: IGNORE DUPLICATES ---
-      if (axios.isCancel(err) || err.message === "DUPLICATE_REQUEST") {
-          console.log("ℹ️ Duplicate profile request ignored.");
-          return; // Do NOT set loading=false, let the other request finish
+      if (axios.isCancel(err)) {
+          console.log("ℹ️ Duplicate request ignored.");
+          return; 
       }
-
       console.error("Profile fetch error:", err);
 
-      // 1. If 404, user needs to create profile
+      // Handle 404 (Profile missing)
       if (err.response && err.response.status === 404) {
         setCurrentPage('patient-signup'); 
         setLoading(false);
         return;
       }
 
-      // 2. Try Supabase Metadata as backup
+      // --- THE FIX: DISCONNECT LOGIC ---
+      // If API fails, check metadata.
       const metaRole = currentUser?.user_metadata?.role;
+
       if (metaRole === 'doctor') {
          setCurrentPage('doctor-home');
-         setLoading(false);
-         return;
       } else if (metaRole === 'patient') {
          setCurrentPage('patient-home');
-         setLoading(false);
-         return;
-      }
-
-      // 3. --- FINAL FAILSAFE ---
-      // If API failed AND metadata is missing, DO NOT DEFAULT TO PATIENT.
-      // Defaulting to patient is what causes the "glitch".
-      // Instead, stay on current page (likely Landing/Login) and show alert.
-      if (currentPage !== 'doctor-home') {
-          console.warn("⚠️ Could not determine role. API failed & no metadata.");
-          // Ideally show a toast here: "Connection failed. Please refresh."
-          // But do NOT send them to patient-home.
+      } else {
+         // IF WE DON'T KNOW, STAY PUT. 
+         // DO NOT DEFAULT TO PATIENT HOME.
+         console.warn("⚠️ Role unknown and API failed. Staying on current page.");
+         // Ideally stay on 'landing' or show error, but never force patient-home
       }
       
       setLoading(false);
@@ -170,14 +169,25 @@ const App = () => {
       case 'signup': return <SignupPage onNavigate={handleNavigate} />;
       case 'doctor-signup': return <DoctorSignup onNavigate={handleNavigate} />;
       case 'patient-signup': return <PatientSignup onNavigate={handleNavigate} user={user} />;
-      case 'patient-home': return <PatientHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
-      case 'doctor-home': return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
-      case 'test-history': return <TestHistoryPage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
-      case 'book-appointment': return <BookAppointmentPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
-      case 'appointments': return <AppointmentsPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
-      case 'symptom-test': return <SymptomTestPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} setSymptomAnswers={setSymptomAnswers} onLogout={handleLogout} user={user} />;
-      case 'xray-upload': return <XRayUploadPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} onLogout={handleLogout} user={user} />;
-      case 'test-result': return <TestResultPage onNavigate={handleNavigate} resultData={pageData} onLogout={handleLogout} user={user} symptomAnswers={symptomAnswers} />;
+      
+      case 'patient-home': 
+        return <PatientHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
+      case 'doctor-home': 
+        return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
+      
+      case 'test-history': 
+        return <TestHistoryPage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
+      case 'book-appointment':
+        return <BookAppointmentPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      case 'appointments':
+        return <AppointmentsPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
+      case 'symptom-test': 
+        return <SymptomTestPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} setSymptomAnswers={setSymptomAnswers} onLogout={handleLogout} user={user} />;
+      case 'xray-upload': 
+        return <XRayUploadPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} onLogout={handleLogout} user={user} />;
+      case 'test-result': 
+        return <TestResultPage onNavigate={handleNavigate} resultData={pageData} onLogout={handleLogout} user={user} symptomAnswers={symptomAnswers} />;
+        
       default: return <LandingPage onNavigate={handleNavigate} />;
     }
   };
