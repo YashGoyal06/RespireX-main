@@ -13,7 +13,7 @@ import TestResultPage from './components/pages/TestResultPage';
 import XRayUploadPage from './components/pages/XRayUploadPage';
 import BookAppointmentPage from './components/pages/BookAppointmentPage';
 import AppointmentsPage from './components/pages/AppointmentsPage';
-import Chatbot from './components/common/Chatbot'; // <--- IMPORT CHATBOT
+import Chatbot from './components/common/Chatbot'; 
 
 import { supabase } from './lib/supabase';
 import api from './lib/api';
@@ -43,7 +43,6 @@ const App = () => {
   useEffect(() => {
     let mounted = true;
     
-    // Safety timer
     const safetyTimer = setTimeout(() => {
       if (mounted && loading) {
         setLoading(false);
@@ -134,7 +133,7 @@ const App = () => {
   };
 
   const renderPage = () => {
-    // Pass 'darkMode' to pages if they need explicit logic (though CSS classes handle most)
+    // --- WE MUST PASS darkMode AND toggleTheme TO ALL PAGES ---
     switch (currentPage) {
       case 'landing': return <LandingPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
       case 'login': return <LoginPage onNavigate={handleNavigate} />;
@@ -143,21 +142,81 @@ const App = () => {
       case 'patient-signup': return <PatientSignup onNavigate={handleNavigate} user={user} />;
       
       case 'patient-home': 
-        return <PatientHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} language={language} toggleLanguage={toggleLanguage} />;
+        return <PatientHomePage 
+            onNavigate={handleNavigate} 
+            onLogout={handleLogout} 
+            user={user} 
+            language={language} toggleLanguage={toggleLanguage} 
+            darkMode={darkMode} toggleTheme={toggleTheme} 
+        />;
+      
       case 'test-history': 
-        return <TestHistoryPage onNavigate={handleNavigate} onLogout={handleLogout} user={user} language={language} toggleLanguage={toggleLanguage} />;
+        return <TestHistoryPage 
+            onNavigate={handleNavigate} 
+            onLogout={handleLogout} 
+            user={user} 
+            language={language} toggleLanguage={toggleLanguage} 
+            darkMode={darkMode} toggleTheme={toggleTheme} 
+        />;
+      
       case 'book-appointment':
-        return <BookAppointmentPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} language={language} toggleLanguage={toggleLanguage} />;
+        return <BookAppointmentPage 
+            onNavigate={handleNavigate} 
+            user={user} 
+            onLogout={handleLogout} 
+            language={language} toggleLanguage={toggleLanguage} 
+            darkMode={darkMode} toggleTheme={toggleTheme} 
+        />;
+      
       case 'appointments':
-        return <AppointmentsPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} language={language} toggleLanguage={toggleLanguage} />;
+        return <AppointmentsPage 
+            onNavigate={handleNavigate} 
+            user={user} 
+            onLogout={handleLogout} 
+            language={language} toggleLanguage={toggleLanguage} 
+            darkMode={darkMode} toggleTheme={toggleTheme} 
+        />;
+      
       case 'xray-upload': 
-        return <XRayUploadPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} onLogout={handleLogout} user={user} language={language} toggleLanguage={toggleLanguage} />;
+        return <XRayUploadPage 
+            onNavigate={handleNavigate} 
+            symptomAnswers={symptomAnswers} 
+            onLogout={handleLogout} 
+            user={user} 
+            language={language} toggleLanguage={toggleLanguage} 
+            darkMode={darkMode} toggleTheme={toggleTheme} 
+        />;
+      
       case 'symptom-test': 
-        return <SymptomTestPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} setSymptomAnswers={setSymptomAnswers} onLogout={handleLogout} user={user} language={language} toggleLanguage={toggleLanguage} />;
+        return <SymptomTestPage 
+            onNavigate={handleNavigate} 
+            symptomAnswers={symptomAnswers} 
+            setSymptomAnswers={setSymptomAnswers} 
+            onLogout={handleLogout} 
+            user={user} 
+            language={language} toggleLanguage={toggleLanguage} 
+            darkMode={darkMode} toggleTheme={toggleTheme} 
+        />;
+      
       case 'test-result': 
-        return <TestResultPage onNavigate={handleNavigate} resultData={pageData} onLogout={handleLogout} user={user} symptomAnswers={symptomAnswers} language={language} toggleLanguage={toggleLanguage} />;
+        return <TestResultPage 
+            onNavigate={handleNavigate} 
+            resultData={pageData} 
+            onLogout={handleLogout} 
+            user={user} 
+            symptomAnswers={symptomAnswers} 
+            language={language} toggleLanguage={toggleLanguage} 
+            darkMode={darkMode} toggleTheme={toggleTheme} 
+        />;
+      
       case 'doctor-home': 
-        return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
+        // Passing it to doctor home as well so the navbar button doesn't disappear
+        return <DoctorHomePage 
+            onNavigate={handleNavigate} 
+            onLogout={handleLogout} 
+            user={user} 
+            darkMode={darkMode} toggleTheme={toggleTheme} 
+        />;
       
       default: return <LandingPage onNavigate={handleNavigate} />;
     }
@@ -178,15 +237,15 @@ const App = () => {
   const isUserLoggedIn = !!user;
 
   return (
-    // DARK MODE WRAPPER
     <div className={darkMode ? 'dark' : ''}>
       <div className="app-container min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
         
-        {/* CHATBOT (Global) */}
+        {/* CHATBOT */}
         {!['login', 'signup'].includes(currentPage) && (
             <Chatbot language={language} />
         )}
 
+        {/* Global Navbar */}
         {showNavbar && !['symptom-test', 'test-result'].includes(currentPage) && (
           <Navbar 
             isLoggedIn={isUserLoggedIn}
@@ -197,10 +256,11 @@ const App = () => {
             onNavigate={handleNavigate}
             language={language}
             toggleLanguage={toggleLanguage}
-            darkMode={darkMode}       // <--- Passed
-            toggleTheme={toggleTheme} // <--- Passed
+            darkMode={darkMode}       
+            toggleTheme={toggleTheme} 
           />
         )}
+        
         {renderPage()}
       </div>
     </div>
