@@ -1,11 +1,16 @@
-import React, { useState } from 'react';
-import { Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Check, Volume2, Mic, MicOff, StopCircle } from 'lucide-react';
 import Navbar from '../common/Navbar';
 
-const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user, language = 'en', toggleLanguage }) => {
+const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user, language = 'en', toggleLanguage, darkMode, toggleTheme }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  
+  // --- VOICE FEATURES STATE ---
+  const [isListening, setIsListening] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(false); 
+  const [voiceError, setVoiceError] = useState('');
+  const recognitionRef = useRef(null);
 
-  // Translation Dictionaries
   const t = {
     en: {
       progress: "Complete",
@@ -14,7 +19,12 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       privacy: "Privacy Note:",
       privacyText: "Your responses are confidential and used only for screening purposes",
       yes: "Yes",
-      no: "No"
+      no: "No",
+      autoSpeak: "Auto-Read Questions",
+      listening: "Listening...",
+      speakNow: "Speak 'Yes' or 'No' now...",
+      errorMic: "Microphone access denied or not supported.",
+      errorNoMatch: "Could not understand. Please try again."
     },
     hi: {
       progress: "पूर्ण",
@@ -23,7 +33,12 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       privacy: "गोपनीयता नोट:",
       privacyText: "आपकी प्रतिक्रियाएं गोपनीय हैं और केवल स्क्रीनिंग उद्देश्यों के लिए उपयोग की जाती हैं",
       yes: "हाँ",
-      no: "नहीं"
+      no: "नहीं",
+      autoSpeak: "प्रश्न ऑटो-रीड करें",
+      listening: "सुन रहा हूँ...",
+      speakNow: "'हाँ' या 'नहीं' बोलें...",
+      errorMic: "माइक्रोफ़ोन एक्सेस अस्वीकृत या समर्थित नहीं है।",
+      errorNoMatch: "समझ नहीं पाया। कृपया पुनः प्रयास करें।"
     }
   };
 
@@ -90,9 +105,87 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
 
   const activeQuestionText = language === 'hi' ? questions[currentQuestion].text_hi : questions[currentQuestion].text_en;
 
-  // --- CORE LOGIC ---
+  const speakQuestion = (text) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); 
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language === 'hi' ? 'hi-IN' : 'en-US';
+      utterance.rate = 0.9; 
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  useEffect(() => {
+    if (autoSpeak) {
+      const timer = setTimeout(() => speakQuestion(activeQuestionText), 500);
+      return () => clearTimeout(timer);
+    } else {
+      window.speechSynthesis.cancel();
+    }
+  }, [currentQuestion, language, autoSpeak]);
+
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+      if (recognitionRef.current) recognitionRef.current.stop();
+    };
+  }, []);
+
+  const handleVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    
+    recognition.lang = language === 'hi' ? 'hi-IN' : 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceError('');
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech error", event.error);
+      setVoiceError(currentT.errorMic);
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript.toLowerCase().trim();
+      const yesWords = ['yes', 'yeah', 'yep', 'correct', 'right', 'haan', 'ha', 'ji', 'sahi', 'han'];
+      const noWords = ['no', 'nope', 'nah', 'incorrect', 'nahi', 'na', 'galat', 'n'];
+
+      if (yesWords.some(w => transcript.includes(w))) {
+        handleAnswer(currentT.yes);
+      } else if (noWords.some(w => transcript.includes(w))) {
+        handleAnswer(currentT.no);
+      } else {
+        setVoiceError(`${currentT.errorNoMatch} ("${transcript}")`);
+        speakQuestion(language === 'hi' ? "समझ नहीं पाया" : "Could not understand");
+      }
+    };
+
+    recognition.start();
+  };
+
   const handleAnswer = (answer) => {
-    // Standardize for backend
     let standardAnswer = "No";
     if (answer === t.en.yes || answer === t.hi.yes) standardAnswer = "Yes";
 
@@ -118,7 +211,7 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
   const progress = ((currentQuestion + 1) / questions.length) * 100;
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-gray-900 dark:to-gray-800 transition-colors">
       <Navbar 
         showCancelButton={true}
         onCancel={() => onNavigate('patient-home')}
@@ -128,18 +221,19 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
         userType="patient"   
         language={language}
         toggleLanguage={toggleLanguage}
+        darkMode={darkMode}
+        toggleTheme={toggleTheme}
       />
 
-      {/* Progress Bar */}
-      <div className="fixed top-20 left-0 right-0 bg-white border-b border-gray-100 z-40">
+      <div className="fixed top-20 left-0 right-0 bg-white dark:bg-gray-800 border-b border-gray-100 dark:border-gray-700 z-40 transition-colors">
         <div className="max-w-4xl mx-auto px-6 py-6">
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm font-semibold text-gray-700">
+            <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
               {language === 'hi' ? `प्रश्न ${currentQuestion + 1} / ${questions.length}` : `Question ${currentQuestion + 1} of ${questions.length}`}
             </span>
-            <span className="text-sm font-semibold text-blue-600">{Math.round(progress)}% {currentT.progress}</span>
+            <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">{Math.round(progress)}% {currentT.progress}</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
+          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
             <div
               className="bg-gradient-to-r from-blue-600 to-cyan-600 h-3 rounded-full transition-all duration-500 ease-out progress-bar"
               style={{ width: `${progress}%` }}
@@ -148,66 +242,108 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
         </div>
       </div>
 
-      {/* Main Content */}
       <div className="pt-44 pb-20 px-6">
         <div className="max-w-4xl mx-auto">
           
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 md:p-12 animate-scale relative">
+          <div className="flex justify-end mb-4 animate-fade-in">
+             <button 
+               onClick={() => setAutoSpeak(!autoSpeak)}
+               className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition ${
+                 autoSpeak ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' : 'bg-white dark:bg-gray-700 text-gray-500 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-600'
+               }`}
+             >
+               <Volume2 className={`w-4 h-4 ${autoSpeak ? 'animate-pulse' : ''}`} />
+               <span>{currentT.autoSpeak}</span>
+               <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${autoSpeak ? 'bg-blue-600' : 'bg-gray-300 dark:bg-gray-500'}`}>
+                  <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${autoSpeak ? 'translate-x-4' : ''}`} />
+               </div>
+             </button>
+          </div>
+
+          <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-8 md:p-12 animate-scale relative transition-colors">
             
+            {voiceError && (
+              <div className="absolute top-4 left-0 right-0 mx-auto w-max px-4 py-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-full text-sm font-semibold flex items-center animate-bounce">
+                <MicOff className="w-4 h-4 mr-2" />
+                {voiceError}
+              </div>
+            )}
+
             <div className="mb-12">
               <div className="flex justify-between items-start mb-6">
-                <div className="inline-block px-4 py-2 bg-blue-50 rounded-full">
-                  <span className="text-sm font-semibold text-blue-600">{currentT.symptomAssessment}</span>
+                <div className="inline-block px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-full">
+                  <span className="text-sm font-semibold text-blue-600 dark:text-blue-300">{currentT.symptomAssessment}</span>
                 </div>
+                
+                <button 
+                  onClick={() => speakQuestion(activeQuestionText)}
+                  className="p-3 bg-gray-100 dark:bg-gray-700 hover:bg-blue-100 dark:hover:bg-blue-900/50 text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-300 rounded-full transition-colors"
+                  title="Read Question"
+                >
+                   <Volume2 className="w-6 h-6" />
+                </button>
               </div>
               
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 leading-relaxed">
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 dark:text-white leading-relaxed">
                 {activeQuestionText}
               </h2>
             </div>
 
-            {/* OPTIONS */}
             <div className="space-y-4">
               {[currentT.yes, currentT.no].map((option, index) => (
                 <button
                   key={index}
                   onClick={() => handleAnswer(option)}
-                  className="group w-full p-6 md:p-8 border-2 border-gray-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left font-semibold text-gray-900 text-xl hover-lift flex items-center justify-between"
+                  className="group w-full p-6 md:p-8 border-2 border-gray-200 dark:border-gray-700 rounded-2xl hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left font-semibold text-gray-900 dark:text-white text-xl hover-lift flex items-center justify-between"
                 >
                   <span>{option}</span>
-                  <div className="w-8 h-8 rounded-full border-2 border-gray-300 group-hover:border-blue-500 group-hover:bg-blue-500 transition-all flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-full border-2 border-gray-300 dark:border-gray-600 group-hover:border-blue-500 group-hover:bg-blue-500 transition-all flex items-center justify-center">
                     <Check className="w-5 h-5 text-white opacity-0 group-hover:opacity-100 transition" strokeWidth={3} />
                   </div>
                 </button>
               ))}
             </div>
 
-            {/* Previous Button - Adjusted Spacing */}
+            <div className="mt-8 flex flex-col items-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">
+                  {isListening ? (
+                    <span className="text-red-600 dark:text-red-400 animate-pulse">{currentT.listening}</span>
+                  ) : (
+                    currentT.speakNow
+                  )}
+                </p>
+                <button 
+                  onClick={handleVoiceInput}
+                  className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-105 ${
+                    isListening 
+                      ? 'bg-red-500 text-white ring-4 ring-red-200 dark:ring-red-900 animate-pulse' 
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {isListening ? <StopCircle className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+                </button>
+            </div>
+
             {currentQuestion > 0 && (
-              <div className="flex flex-col md:block">
-                 {/* Desktop: Reduced margin, removed absolute positioning */}
-                 <button
-                   onClick={handlePrevious}
-                   className="hidden md:inline-block mt-6 text-gray-500 hover:text-gray-900 font-medium transition-colors"
-                 >
-                   {currentT.previous}
-                 </button>
-                 
-                 {/* Mobile: Reduced margin */}
-                 <button 
-                   onClick={handlePrevious} 
-                   className="md:hidden mt-4 w-full py-3 text-gray-500 hover:bg-gray-50 rounded-xl transition-colors"
-                 >
-                   {currentT.previous}
-                 </button>
-              </div>
+              <button
+                onClick={handlePrevious}
+                className="mt-8 text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white font-medium absolute bottom-8 left-8 hidden md:block"
+              >
+                {currentT.previous}
+              </button>
+            )}
+            
+            {currentQuestion > 0 && (
+               <button onClick={handlePrevious} className="md:hidden mt-8 w-full py-3 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-700 rounded-xl">
+                 {currentT.previous}
+               </button>
             )}
 
           </div>
 
-          <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-6 text-center animate-fade-in">
-            <p className="text-gray-600">
-              <span className="font-semibold text-gray-900">{currentT.privacy}</span> {currentT.privacyText}
+          <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl border border-gray-100 dark:border-gray-700 p-6 text-center animate-fade-in transition-colors">
+            <p className="text-gray-600 dark:text-gray-300">
+              <span className="font-semibold text-gray-900 dark:text-white">{currentT.privacy}</span> {currentT.privacyText}
             </p>
           </div>
         </div>
