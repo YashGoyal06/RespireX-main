@@ -10,7 +10,7 @@ const LandingPage = ({ onNavigate, user, onLogout, language, toggleLanguage, dar
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        const response = await api.get('/stats/'); 
+        const response = await api.get('/public-stats/'); // Updated to likely endpoint, or keep '/stats/' if valid
         setTotalTests(response.data.total_tests || 0);
       } catch (error) {
         setTotalTests(0); 
@@ -18,25 +18,34 @@ const LandingPage = ({ onNavigate, user, onLogout, language, toggleLanguage, dar
     };
     fetchStats();
   }, []);
-  
+   
   const handleGetStarted = () => {
-    if (user) onNavigate('patient-home');
-    else onNavigate('signup');
+    if (user) {
+        // Redirect based on role if user is already logged in
+        if (user.user_metadata?.role === 'doctor') {
+            onNavigate('doctor-home');
+        } else {
+            onNavigate('patient-home');
+        }
+    } else {
+        onNavigate('signup');
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 transition-colors duration-300">
       
+      {/* 1. Passed darkMode and toggleTheme to Navbar */}
       <Navbar 
         onLogin={() => onNavigate('login')}
         onNavigate={onNavigate} 
-        isLoggedIn={!!user}     
-        user={user}             
+        isLoggedIn={!!user}      
+        user={user}              
         onLogout={onLogout}
         language={language}
         toggleLanguage={toggleLanguage}
-        darkMode={darkMode}       // <--- PASSED TO NAVBAR
-        toggleTheme={toggleTheme} // <--- PASSED TO NAVBAR
+        darkMode={darkMode}       
+        toggleTheme={toggleTheme} 
       />
 
       {/* Hero Section */}
@@ -44,21 +53,22 @@ const LandingPage = ({ onNavigate, user, onLogout, language, toggleLanguage, dar
         className="relative pt-48 pb-20 px-6 lg:px-8 text-center bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: "url('/landing_page_bg.jpg')" }}
       >
-        <div className="absolute inset-0 bg-white/60 dark:bg-black/70 backdrop-blur-[2px]"></div>
+        {/* Dark overlay for better text readability in all modes */}
+        <div className="absolute inset-0 bg-white/60 dark:bg-black/80 backdrop-blur-[2px] transition-colors duration-300"></div>
 
         <div className="relative z-10 max-w-5xl mx-auto">
-          <div className="inline-block px-4 py-2 bg-blue-50 dark:bg-blue-900/50 rounded-full mb-8 animate-fade-in">
+          <div className="inline-block px-4 py-2 bg-blue-50 dark:bg-blue-900/50 rounded-full mb-8 animate-fade-in border border-blue-100 dark:border-blue-800">
             <span className="text-sm font-semibold text-blue-600 dark:text-blue-300">AI-Powered Healthcare</span>
           </div>
           
           <h1 className="font-bold text-gray-900 dark:text-white mb-8 leading-tight animate-fade-in stagger-1">
             <span className="text-4xl lg:text-5xl block text-gray-700 dark:text-gray-300 mb-2">Early Detection</span>
-            <span className="block text-7xl lg:text-9xl font-extrabold bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 dark:from-white dark:via-blue-400 dark:to-gray-300 bg-clip-text text-transparent my-4">
+            <span className="block text-7xl lg:text-9xl font-extrabold bg-gradient-to-r from-gray-900 via-blue-800 to-gray-900 dark:from-white dark:via-blue-400 dark:to-gray-300 bg-clip-text text-transparent my-4 drop-shadow-sm">
               TUBERCULOSIS
             </span>
           </h1>
 
-          <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 leading-relaxed max-w-2xl mx-auto animate-fade-in stagger-2">
+          <p className="text-xl text-gray-600 dark:text-gray-300 mb-10 leading-relaxed max-w-2xl mx-auto animate-fade-in stagger-2 font-medium">
             Advanced machine learning for quick, accurate tuberculosis screening. 
             Making healthcare accessible for everyone.
           </p>
@@ -66,7 +76,7 @@ const LandingPage = ({ onNavigate, user, onLogout, language, toggleLanguage, dar
           <div className="flex justify-center animate-fade-in stagger-3">
             <button
               onClick={handleGetStarted}
-              className="group px-10 py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-lg rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition shadow-2xl hover:shadow-3xl flex items-center space-x-3 btn-primary"
+              className="group px-10 py-5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-lg rounded-full hover:bg-gray-800 dark:hover:bg-gray-200 transition shadow-2xl hover:shadow-3xl flex items-center space-x-3 btn-primary font-bold"
             >
               <span className="font-medium">Get Started</span>
               <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition" />
@@ -76,7 +86,7 @@ const LandingPage = ({ onNavigate, user, onLogout, language, toggleLanguage, dar
       </div>
 
       {/* Features Section */}
-      <div className="py-20 bg-white dark:bg-gray-900 transition-colors">
+      <div className="py-20 bg-white dark:bg-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             
@@ -107,7 +117,7 @@ const LandingPage = ({ onNavigate, user, onLogout, language, toggleLanguage, dar
 
             <div className="order-1 lg:order-2 relative animate-fade-in stagger-4">
               <div className="relative z-10">
-                <div className="relative w-full h-[400px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white dark:border-gray-700">
+                <div className="relative w-full h-[400px] rounded-3xl overflow-hidden shadow-2xl border-4 border-white dark:border-gray-700 transition-colors duration-300">
                   <img src="/landing_page_tb.png" alt="TB Detection Interface" className="w-full h-full object-cover" />
                 </div>
               </div>
@@ -120,7 +130,7 @@ const LandingPage = ({ onNavigate, user, onLogout, language, toggleLanguage, dar
       </div>
 
       {/* Stats Section */}
-      <div className="py-20 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 transition-colors">
+      <div className="py-20 bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-800 dark:to-gray-900 transition-colors duration-300">
         <div className="max-w-7xl mx-auto px-6 lg:px-8">
           <div className="grid md:grid-cols-3 gap-8 text-center">
             <div className="animate-fade-in stagger-1">
@@ -142,7 +152,7 @@ const LandingPage = ({ onNavigate, user, onLogout, language, toggleLanguage, dar
       </div>
 
       {/* CTA Section */}
-      <div className="py-20 bg-gradient-to-br from-gray-900 to-gray-800 dark:from-black dark:to-gray-900 text-white">
+      <div className="py-20 bg-gradient-to-br from-gray-900 to-gray-800 dark:from-black dark:to-gray-900 text-white transition-colors duration-300">
         <div className="max-w-4xl mx-auto px-6 text-center">
           <h2 className="text-4xl lg:text-5xl font-bold mb-6 animate-fade-in">Ready to Get Started?</h2>
           <p className="text-xl text-gray-300 mb-8 animate-fade-in stagger-1">
