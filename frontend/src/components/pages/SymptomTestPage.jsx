@@ -1,9 +1,15 @@
-import React, { useState } from 'react';
-import { Check } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Check, Volume2, Mic, MicOff, StopCircle } from 'lucide-react';
 import Navbar from '../common/Navbar';
 
 const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user, language = 'en', toggleLanguage }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  
+  // --- VOICE FEATURES STATE ---
+  const [isListening, setIsListening] = useState(false);
+  const [autoSpeak, setAutoSpeak] = useState(false); // Toggle for auto-reading questions
+  const [voiceError, setVoiceError] = useState('');
+  const recognitionRef = useRef(null);
 
   // Translation Dictionaries
   const t = {
@@ -14,7 +20,12 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       privacy: "Privacy Note:",
       privacyText: "Your responses are confidential and used only for screening purposes",
       yes: "Yes",
-      no: "No"
+      no: "No",
+      autoSpeak: "Auto-Read Questions",
+      listening: "Listening...",
+      speakNow: "Speak 'Yes' or 'No' now...",
+      errorMic: "Microphone access denied or not supported.",
+      errorNoMatch: "Could not understand. Please try again."
     },
     hi: {
       progress: "पूर्ण",
@@ -23,7 +34,12 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       privacy: "गोपनीयता नोट:",
       privacyText: "आपकी प्रतिक्रियाएं गोपनीय हैं और केवल स्क्रीनिंग उद्देश्यों के लिए उपयोग की जाती हैं",
       yes: "हाँ",
-      no: "नहीं"
+      no: "नहीं",
+      autoSpeak: "प्रश्न ऑटो-रीड करें", // Auto-read questions
+      listening: "सुन रहा हूँ...",
+      speakNow: "'हाँ' या 'नहीं' बोलें...",
+      errorMic: "माइक्रोफ़ोन एक्सेस अस्वीकृत या समर्थित नहीं है।",
+      errorNoMatch: "समझ नहीं पाया। कृपया पुनः प्रयास करें।"
     }
   };
 
@@ -88,9 +104,103 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
     }
   ];
 
+  const activeQuestionText = language === 'hi' ? questions[currentQuestion].text_hi : questions[currentQuestion].text_en;
+
+  // --- TEXT TO SPEECH (TTS) ---
+  const speakQuestion = (text) => {
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.cancel(); // Stop previous
+      const utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = language === 'hi' ? 'hi-IN' : 'en-US';
+      utterance.rate = 0.9; // Slightly slower for clarity
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  // Auto-speak effect
+  useEffect(() => {
+    if (autoSpeak) {
+      // Small delay to ensure smooth transition
+      const timer = setTimeout(() => speakQuestion(activeQuestionText), 500);
+      return () => clearTimeout(timer);
+    } else {
+      window.speechSynthesis.cancel();
+    }
+  }, [currentQuestion, language, autoSpeak]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      window.speechSynthesis.cancel();
+      if (recognitionRef.current) recognitionRef.current.stop();
+    };
+  }, []);
+
+  // --- SPEECH TO TEXT (STT) ---
+  const handleVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    
+    if (!SpeechRecognition) {
+      alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
+      return;
+    }
+
+    if (isListening) {
+      if (recognitionRef.current) recognitionRef.current.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    
+    recognition.lang = language === 'hi' ? 'hi-IN' : 'en-US';
+    recognition.continuous = false;
+    recognition.interimResults = false;
+
+    recognition.onstart = () => {
+      setIsListening(true);
+      setVoiceError('');
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognition.onerror = (event) => {
+      console.error("Speech error", event.error);
+      setVoiceError(currentT.errorMic);
+      setIsListening(false);
+    };
+
+    recognition.onresult = (event) => {
+      const transcript = event.results[0][0].transcript.toLowerCase().trim();
+      console.log("Heard:", transcript);
+
+      // --- LOGIC TO MATCH VOICE TO YES/NO ---
+      const yesWords = ['yes', 'yeah', 'yep', 'correct', 'right', 'haan', 'ha', 'ji', 'sahi', 'han'];
+      const noWords = ['no', 'nope', 'nah', 'incorrect', 'nahi', 'na', 'galat', 'n'];
+
+      if (yesWords.some(w => transcript.includes(w))) {
+        handleAnswer(currentT.yes);
+      } else if (noWords.some(w => transcript.includes(w))) {
+        handleAnswer(currentT.no);
+      } else {
+        setVoiceError(`${currentT.errorNoMatch} ("${transcript}")`);
+        // Speak the error for accessibility
+        speakQuestion(language === 'hi' ? "समझ नहीं पाया" : "Could not understand");
+      }
+    };
+
+    recognition.start();
+  };
+
+  // --- CORE LOGIC ---
   const handleAnswer = (answer) => {
-    // Always store answers in English ('Yes'/'No') for backend consistency
-    const standardAnswer = answer === currentT.yes ? "Yes" : "No";
+    // Standardize for backend
+    // If the answer passed is the translated 'Yes'/'No', map it back to English "Yes"/"No"
+    let standardAnswer = "No";
+    if (answer === t.en.yes || answer === t.hi.yes) standardAnswer = "Yes";
 
     const updatedAnswers = {
       ...symptomAnswers,
@@ -98,6 +208,9 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
     };
     setSymptomAnswers(updatedAnswers);
     
+    // Feedback sound (optional UX improvement)
+    // const audio = new Audio('/click.mp3'); audio.play().catch(e=>{});
+
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
@@ -112,7 +225,6 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
   };
 
   const progress = ((currentQuestion + 1) / questions.length) * 100;
-  const activeQuestionText = language === 'hi' ? questions[currentQuestion].text_hi : questions[currentQuestion].text_en;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -148,22 +260,61 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       {/* Main Content */}
       <div className="pt-44 pb-20 px-6">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-12 animate-scale">
-            <div className="mb-12">
-              <div className="inline-block px-4 py-2 bg-blue-50 rounded-full mb-6">
-                <span className="text-sm font-semibold text-blue-600">{currentT.symptomAssessment}</span>
+          
+          {/* Controls Bar (Auto-Speak) */}
+          <div className="flex justify-end mb-4 animate-fade-in">
+             <button 
+               onClick={() => setAutoSpeak(!autoSpeak)}
+               className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition ${
+                 autoSpeak ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-500 hover:bg-gray-50'
+               }`}
+             >
+               <Volume2 className={`w-4 h-4 ${autoSpeak ? 'animate-pulse' : ''}`} />
+               <span>{currentT.autoSpeak}</span>
+               <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${autoSpeak ? 'bg-blue-600' : 'bg-gray-300'}`}>
+                  <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${autoSpeak ? 'translate-x-4' : ''}`} />
+               </div>
+             </button>
+          </div>
+
+          <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 md:p-12 animate-scale relative">
+            
+            {/* --- VOICE ERROR TOAST --- */}
+            {voiceError && (
+              <div className="absolute top-4 left-0 right-0 mx-auto w-max px-4 py-2 bg-red-100 text-red-700 rounded-full text-sm font-semibold flex items-center animate-bounce">
+                <MicOff className="w-4 h-4 mr-2" />
+                {voiceError}
               </div>
-              <h2 className="text-4xl font-bold text-gray-900 leading-relaxed">
+            )}
+
+            <div className="mb-12">
+              <div className="flex justify-between items-start mb-6">
+                <div className="inline-block px-4 py-2 bg-blue-50 rounded-full">
+                  <span className="text-sm font-semibold text-blue-600">{currentT.symptomAssessment}</span>
+                </div>
+                
+                {/* MANUAL SPEAK BUTTON */}
+                <button 
+                  onClick={() => speakQuestion(activeQuestionText)}
+                  className="p-3 bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-600 rounded-full transition-colors"
+                  title="Read Question"
+                >
+                   <Volume2 className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <h2 className="text-3xl md:text-4xl font-bold text-gray-900 leading-relaxed">
                 {activeQuestionText}
               </h2>
             </div>
 
+            {/* OPTIONS + MIC */}
             <div className="space-y-4">
               {[currentT.yes, currentT.no].map((option, index) => (
                 <button
                   key={index}
                   onClick={() => handleAnswer(option)}
-                  className="group w-full p-8 border-2 border-gray-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left font-semibold text-gray-900 text-xl hover-lift flex items-center justify-between"
+                  className="group w-full p-6 md:p-8 border-2 border-gray-200 rounded-2xl hover:border-blue-500 hover:bg-blue-50 transition-all text-left font-semibold text-gray-900 text-xl hover-lift flex items-center justify-between"
                 >
                   <span>{option}</span>
                   <div className="w-8 h-8 rounded-full border-2 border-gray-300 group-hover:border-blue-500 group-hover:bg-blue-500 transition-all flex items-center justify-center">
@@ -173,14 +324,43 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
               ))}
             </div>
 
+            {/* --- BIG MIC BUTTON --- */}
+            <div className="mt-8 flex flex-col items-center">
+                <p className="text-sm text-gray-500 mb-3 font-medium">
+                  {isListening ? (
+                    <span className="text-red-600 animate-pulse">{currentT.listening}</span>
+                  ) : (
+                    currentT.speakNow
+                  )}
+                </p>
+                <button 
+                  onClick={handleVoiceInput}
+                  className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-105 ${
+                    isListening 
+                      ? 'bg-red-500 text-white ring-4 ring-red-200 animate-pulse' 
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                  }`}
+                >
+                  {isListening ? <StopCircle className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
+                </button>
+            </div>
+
             {currentQuestion > 0 && (
               <button
                 onClick={handlePrevious}
-                className="mt-8 text-gray-600 hover:text-gray-900 font-medium"
+                className="mt-8 text-gray-600 hover:text-gray-900 font-medium absolute bottom-8 left-8 hidden md:block"
               >
                 {currentT.previous}
               </button>
             )}
+            
+            {/* Mobile Previous Button */}
+            {currentQuestion > 0 && (
+               <button onClick={handlePrevious} className="md:hidden mt-8 w-full py-3 text-gray-500 hover:bg-gray-50 rounded-xl">
+                 {currentT.previous}
+               </button>
+            )}
+
           </div>
 
           <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-6 text-center animate-fade-in">
