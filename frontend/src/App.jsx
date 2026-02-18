@@ -13,6 +13,7 @@ import TestResultPage from './components/pages/TestResultPage';
 import XRayUploadPage from './components/pages/XRayUploadPage';
 import BookAppointmentPage from './components/pages/BookAppointmentPage';
 import AppointmentsPage from './components/pages/AppointmentsPage';
+import Chatbot from './components/common/Chatbot'; // <--- IMPORT CHATBOT
 
 import { supabase } from './lib/supabase';
 import api from './lib/api';
@@ -28,9 +29,15 @@ const App = () => {
   const [user, setUser] = useState(null);
 
   // --- MULTILINGUAL STATE ---
-  const [language, setLanguage] = useState('en'); // 'en' (English) | 'hi' (Hindi)
+  const [language, setLanguage] = useState('en'); 
   const toggleLanguage = () => {
     setLanguage(prev => prev === 'en' ? 'hi' : 'en');
+  };
+
+  // --- DARK MODE STATE ---
+  const [darkMode, setDarkMode] = useState(false);
+  const toggleTheme = () => {
+    setDarkMode(!darkMode);
   };
 
   useEffect(() => {
@@ -39,7 +46,6 @@ const App = () => {
     // Safety timer
     const safetyTimer = setTimeout(() => {
       if (mounted && loading) {
-        console.warn("⚠️ Safety timer triggered.");
         setLoading(false);
       }
     }, 20000); 
@@ -51,11 +57,8 @@ const App = () => {
         setIsCheckingAuth(true);
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        if (error) throw error;
-        
         if (session?.user && mounted) {
           setUser(session.user);
-          // PRE-CHECK: If metadata already says doctor, set it immediately
           if (session.user.user_metadata?.role === 'doctor') {
              setCurrentPage('doctor-home');
           }
@@ -64,7 +67,6 @@ const App = () => {
           setLoading(false);
         }
       } catch (error) {
-        console.log("Init session check failed:", error.message);
         if (mounted) setLoading(false);
       } finally {
         if (mounted) setIsCheckingAuth(false);
@@ -105,51 +107,25 @@ const App = () => {
         setLoading(false);
         return;
     }
-
     try {
       setIsCheckingAuth(true);
       const response = await api.get('/profile/');
       const role = response.data.role;
-      
-      if (role === 'doctor') {
-        setCurrentPage('doctor-home');
-      } else if (role === 'patient') {
-        setCurrentPage('patient-home');
-      }
+      if (role === 'doctor') setCurrentPage('doctor-home');
+      else if (role === 'patient') setCurrentPage('patient-home');
       setLoading(false);
-
     } catch (err) {
-      if (axios.isCancel(err)) {
-          return; 
-      }
-      console.error("Profile fetch error:", err);
-
-      if (err.response && err.response.status === 404) {
-        setCurrentPage('patient-signup'); 
-        setLoading(false);
-        return;
-      }
-
+      if (axios.isCancel(err)) return; 
       const metaRole = currentUser?.user_metadata?.role;
-      if (metaRole === 'doctor') {
-         setCurrentPage('doctor-home');
-      } else if (metaRole === 'patient') {
-         setCurrentPage('patient-home');
-      } else {
-         console.warn("⚠️ Role unknown and API failed. Staying on current page.");
-      }
-      
+      if (metaRole === 'doctor') setCurrentPage('doctor-home');
+      else if (metaRole === 'patient') setCurrentPage('patient-home');
       setLoading(false);
       setIsCheckingAuth(false);
     }
   };
 
   const handleLogout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch (error) {
-      console.error("❌ Logout error:", error);
-    }
+    try { await supabase.auth.signOut(); } catch (error) { console.error(error); }
   };
 
   const handleNavigate = (page, data = null) => {
@@ -158,85 +134,28 @@ const App = () => {
   };
 
   const renderPage = () => {
+    // Pass 'darkMode' to pages if they need explicit logic (though CSS classes handle most)
     switch (currentPage) {
-      
       case 'landing': return <LandingPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} />;
-      
       case 'login': return <LoginPage onNavigate={handleNavigate} />;
       case 'signup': return <SignupPage onNavigate={handleNavigate} />;
       case 'doctor-signup': return <DoctorSignup onNavigate={handleNavigate} />;
       case 'patient-signup': return <PatientSignup onNavigate={handleNavigate} user={user} />;
       
-      // --- UPDATED PATIENT PAGES (Passing language props) ---
       case 'patient-home': 
-        return <PatientHomePage 
-          onNavigate={handleNavigate} 
-          onLogout={handleLogout} 
-          user={user} 
-          language={language}             // <--- Passed
-          toggleLanguage={toggleLanguage} // <--- Passed
-        />;
-
+        return <PatientHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} language={language} toggleLanguage={toggleLanguage} />;
       case 'test-history': 
-        return <TestHistoryPage 
-          onNavigate={handleNavigate} 
-          onLogout={handleLogout} 
-          user={user} 
-          language={language}             // <--- Passed
-          toggleLanguage={toggleLanguage} // <--- Passed
-        />;
-
+        return <TestHistoryPage onNavigate={handleNavigate} onLogout={handleLogout} user={user} language={language} toggleLanguage={toggleLanguage} />;
       case 'book-appointment':
-        return <BookAppointmentPage 
-          onNavigate={handleNavigate} 
-          user={user} 
-          onLogout={handleLogout} 
-          language={language}             // <--- Passed
-          toggleLanguage={toggleLanguage} // <--- Passed
-        />;
-
+        return <BookAppointmentPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} language={language} toggleLanguage={toggleLanguage} />;
       case 'appointments':
-        return <AppointmentsPage 
-          onNavigate={handleNavigate} 
-          user={user} 
-          onLogout={handleLogout} 
-          language={language}             // <--- Passed
-          toggleLanguage={toggleLanguage} // <--- Passed
-        />;
-      
+        return <AppointmentsPage onNavigate={handleNavigate} user={user} onLogout={handleLogout} language={language} toggleLanguage={toggleLanguage} />;
       case 'xray-upload': 
-        return <XRayUploadPage 
-          onNavigate={handleNavigate} 
-          symptomAnswers={symptomAnswers} 
-          onLogout={handleLogout} 
-          user={user}
-          language={language}             // <--- Passed
-          toggleLanguage={toggleLanguage} // <--- Passed
-        />;
-
+        return <XRayUploadPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} onLogout={handleLogout} user={user} language={language} toggleLanguage={toggleLanguage} />;
       case 'symptom-test': 
-        return <SymptomTestPage 
-          onNavigate={handleNavigate} 
-          symptomAnswers={symptomAnswers} 
-          setSymptomAnswers={setSymptomAnswers} 
-          onLogout={handleLogout}
-          user={user}
-          language={language}             
-          toggleLanguage={toggleLanguage} 
-        />;
-      
+        return <SymptomTestPage onNavigate={handleNavigate} symptomAnswers={symptomAnswers} setSymptomAnswers={setSymptomAnswers} onLogout={handleLogout} user={user} language={language} toggleLanguage={toggleLanguage} />;
       case 'test-result': 
-        return <TestResultPage 
-          onNavigate={handleNavigate} 
-          resultData={pageData} 
-          onLogout={handleLogout}
-          user={user}
-          symptomAnswers={symptomAnswers}
-          language={language}             
-          toggleLanguage={toggleLanguage} 
-        />;
-
-      // Doctor pages (No changes as requested)
+        return <TestResultPage onNavigate={handleNavigate} resultData={pageData} onLogout={handleLogout} user={user} symptomAnswers={symptomAnswers} language={language} toggleLanguage={toggleLanguage} />;
       case 'doctor-home': 
         return <DoctorHomePage onNavigate={handleNavigate} onLogout={handleLogout} user={user} />;
       
@@ -246,37 +165,44 @@ const App = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-900">
         <div className="text-center">
           <GooeyLoader className="mx-auto mb-8" primaryColor="#60a5fa" secondaryColor="#bae6fd" borderColor="#bfdbfe" />
-          <p className="text-gray-600">Loading...</p>
+          <p className="text-gray-600 dark:text-gray-300">Loading...</p>
         </div>
       </div>
     );
   }
 
-  // Navbar Logic
   const showNavbar = !['landing', 'login', 'signup', 'doctor-signup', 'patient-signup', 'patient-home', 'doctor-home', 'test-history', 'xray-upload','book-appointment', 'appointments'].includes(currentPage);
-  
   const isUserLoggedIn = !!user;
 
   return (
-    <div className="app-container">
-      {/* Global Navbar for pages that use it (and aren't excluding it) */}
-      {showNavbar && !['symptom-test', 'test-result'].includes(currentPage) && (
-        <Navbar 
-          isLoggedIn={isUserLoggedIn}
-          user={user}
-          onLogin={() => handleNavigate('login')}
-          onLogout={handleLogout}
-          userType={null}
-          onNavigate={handleNavigate}
-          // Pass props here too if Landing/Generic pages need toggle
-          language={language}
-          toggleLanguage={toggleLanguage}
-        />
-      )}
-      {renderPage()}
+    // DARK MODE WRAPPER
+    <div className={darkMode ? 'dark' : ''}>
+      <div className="app-container min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 transition-colors duration-300">
+        
+        {/* CHATBOT (Global) */}
+        {!['login', 'signup'].includes(currentPage) && (
+            <Chatbot language={language} />
+        )}
+
+        {showNavbar && !['symptom-test', 'test-result'].includes(currentPage) && (
+          <Navbar 
+            isLoggedIn={isUserLoggedIn}
+            user={user}
+            onLogin={() => handleNavigate('login')}
+            onLogout={handleLogout}
+            userType={null}
+            onNavigate={handleNavigate}
+            language={language}
+            toggleLanguage={toggleLanguage}
+            darkMode={darkMode}       // <--- Passed
+            toggleTheme={toggleTheme} // <--- Passed
+          />
+        )}
+        {renderPage()}
+      </div>
     </div>
   );
 };
