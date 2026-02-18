@@ -1,12 +1,9 @@
-import React, { useState, useEffect } from 'react';
-import { Check, Volume2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Check } from 'lucide-react';
 import Navbar from '../common/Navbar';
 
 const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user, language = 'en', toggleLanguage }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  
-  // --- VOICE FEATURES STATE (Text-to-Speech only) ---
-  const [autoSpeak, setAutoSpeak] = useState(false); // Toggle for auto-reading questions
 
   // Translation Dictionaries
   const t = {
@@ -17,8 +14,7 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       privacy: "Privacy Note:",
       privacyText: "Your responses are confidential and used only for screening purposes",
       yes: "Yes",
-      no: "No",
-      autoSpeak: "Auto-Read Questions"
+      no: "No"
     },
     hi: {
       progress: "पूर्ण",
@@ -27,8 +23,7 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       privacy: "गोपनीयता नोट:",
       privacyText: "आपकी प्रतिक्रियाएं गोपनीय हैं और केवल स्क्रीनिंग उद्देश्यों के लिए उपयोग की जाती हैं",
       yes: "हाँ",
-      no: "नहीं",
-      autoSpeak: "प्रश्न ऑटो-रीड करें"
+      no: "नहीं"
     }
   };
 
@@ -95,39 +90,9 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
 
   const activeQuestionText = language === 'hi' ? questions[currentQuestion].text_hi : questions[currentQuestion].text_en;
 
-  // --- TEXT TO SPEECH (TTS) ---
-  const speakQuestion = (text) => {
-    if ('speechSynthesis' in window) {
-      window.speechSynthesis.cancel(); // Stop previous
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = language === 'hi' ? 'hi-IN' : 'en-US';
-      utterance.rate = 0.9; // Slightly slower for clarity
-      window.speechSynthesis.speak(utterance);
-    }
-  };
-
-  // Auto-speak effect
-  useEffect(() => {
-    if (autoSpeak) {
-      // Small delay to ensure smooth transition
-      const timer = setTimeout(() => speakQuestion(activeQuestionText), 500);
-      return () => clearTimeout(timer);
-    } else {
-      window.speechSynthesis.cancel();
-    }
-  }, [currentQuestion, language, autoSpeak]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      window.speechSynthesis.cancel();
-    };
-  }, []);
-
   // --- CORE LOGIC ---
   const handleAnswer = (answer) => {
     // Standardize for backend
-    // If the answer passed is the translated 'Yes'/'No', map it back to English "Yes"/"No"
     let standardAnswer = "No";
     if (answer === t.en.yes || answer === t.hi.yes) standardAnswer = "Yes";
 
@@ -137,9 +102,6 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
     };
     setSymptomAnswers(updatedAnswers);
     
-    // Feedback sound (optional UX improvement)
-    // const audio = new Audio('/click.mp3'); audio.play().catch(e=>{});
-
     if (currentQuestion < questions.length - 1) {
       setCurrentQuestion(currentQuestion + 1);
     } else {
@@ -190,22 +152,6 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       <div className="pt-44 pb-20 px-6">
         <div className="max-w-4xl mx-auto">
           
-          {/* Controls Bar (Auto-Speak) */}
-          <div className="flex justify-end mb-4 animate-fade-in">
-             <button 
-               onClick={() => setAutoSpeak(!autoSpeak)}
-               className={`flex items-center space-x-2 px-4 py-2 rounded-full text-sm font-medium transition ${
-                 autoSpeak ? 'bg-blue-100 text-blue-700' : 'bg-white text-gray-500 hover:bg-gray-50'
-               }`}
-             >
-               <Volume2 className={`w-4 h-4 ${autoSpeak ? 'animate-pulse' : ''}`} />
-               <span>{currentT.autoSpeak}</span>
-               <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${autoSpeak ? 'bg-blue-600' : 'bg-gray-300'}`}>
-                  <div className={`w-3 h-3 bg-white rounded-full shadow-sm transform transition-transform ${autoSpeak ? 'translate-x-4' : ''}`} />
-               </div>
-             </button>
-          </div>
-
           <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8 md:p-12 animate-scale relative">
             
             <div className="mb-12">
@@ -213,15 +159,6 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
                 <div className="inline-block px-4 py-2 bg-blue-50 rounded-full">
                   <span className="text-sm font-semibold text-blue-600">{currentT.symptomAssessment}</span>
                 </div>
-                
-                {/* MANUAL SPEAK BUTTON */}
-                <button 
-                  onClick={() => speakQuestion(activeQuestionText)}
-                  className="p-3 bg-gray-100 hover:bg-blue-100 text-gray-600 hover:text-blue-600 rounded-full transition-colors"
-                  title="Read Question"
-                >
-                   <Volume2 className="w-6 h-6" />
-                </button>
               </div>
               
               <h2 className="text-3xl md:text-4xl font-bold text-gray-900 leading-relaxed">
@@ -229,7 +166,7 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
               </h2>
             </div>
 
-            {/* OPTIONS - No Mic Here */}
+            {/* OPTIONS */}
             <div className="space-y-4">
               {[currentT.yes, currentT.no].map((option, index) => (
                 <button
@@ -245,20 +182,25 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
               ))}
             </div>
 
+            {/* Previous Button - Adjusted Spacing */}
             {currentQuestion > 0 && (
-              <button
-                onClick={handlePrevious}
-                className="mt-8 text-gray-600 hover:text-gray-900 font-medium absolute bottom-8 left-8 hidden md:block"
-              >
-                {currentT.previous}
-              </button>
-            )}
-            
-            {/* Mobile Previous Button */}
-            {currentQuestion > 0 && (
-               <button onClick={handlePrevious} className="md:hidden mt-8 w-full py-3 text-gray-500 hover:bg-gray-50 rounded-xl">
-                 {currentT.previous}
-               </button>
+              <div className="flex flex-col md:block">
+                 {/* Desktop: Reduced margin, removed absolute positioning */}
+                 <button
+                   onClick={handlePrevious}
+                   className="hidden md:inline-block mt-6 text-gray-500 hover:text-gray-900 font-medium transition-colors"
+                 >
+                   {currentT.previous}
+                 </button>
+                 
+                 {/* Mobile: Reduced margin */}
+                 <button 
+                   onClick={handlePrevious} 
+                   className="md:hidden mt-4 w-full py-3 text-gray-500 hover:bg-gray-50 rounded-xl transition-colors"
+                 >
+                   {currentT.previous}
+                 </button>
+              </div>
             )}
 
           </div>
