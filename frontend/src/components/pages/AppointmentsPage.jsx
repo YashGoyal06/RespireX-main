@@ -4,11 +4,48 @@ import api from '../../lib/api';
 import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
-const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
+const AppointmentsPage = ({ onNavigate, user, onLogout, language = 'en', toggleLanguage }) => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   
   const isDoctor = user?.user_metadata?.role === 'doctor' || user?.role === 'doctor';
+
+  const t = {
+    en: {
+        back: "Back to Dashboard",
+        patientTitle: "My Appointments",
+        doctorTitle: "Patient Appointments",
+        patientDesc: "Track your upcoming and past visits.",
+        doctorDesc: "Manage your incoming consultation requests.",
+        bookNew: "Book New",
+        loading: "Loading appointments...",
+        noAppt: "No appointments found",
+        noApptPatient: "You don't have any scheduled consultations.",
+        noApptDoctor: "You don't have any patient bookings yet.",
+        reason: "Reason:",
+        doctorNote: "Doctor's Update:",
+        accept: "Accept",
+        decline: "Decline"
+    },
+    hi: {
+        back: "डैशबोर्ड पर वापस जाएं",
+        patientTitle: "मेरी नियुक्तियाँ",
+        doctorTitle: "रोगी नियुक्तियाँ",
+        patientDesc: "अपनी आगामी और पिछली यात्राओं को ट्रैक करें।",
+        doctorDesc: "अपने आने वाले परामर्श अनुरोधों को प्रबंधित करें।",
+        bookNew: "नई बुक करें",
+        loading: "नियुक्तियाँ लोड हो रही हैं...",
+        noAppt: "कोई नियुक्ति नहीं मिली",
+        noApptPatient: "आपके पास कोई निर्धारित परामर्श नहीं है।",
+        noApptDoctor: "आपके पास अभी तक कोई रोगी बुकिंग नहीं है।",
+        reason: "कारण:",
+        doctorNote: "डॉक्टर का अपडेट:",
+        accept: "स्वीकार करें",
+        decline: "अस्वीकार करें"
+    }
+  };
+
+  const currentT = t[language];
 
   useEffect(() => {
     fetchAppts();
@@ -54,7 +91,7 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex flex-col">
-      <Navbar isLoggedIn={true} user={user} onLogout={onLogout} onNavigate={onNavigate} />
+      <Navbar isLoggedIn={true} user={user} onLogout={onLogout} onNavigate={onNavigate} language={language} toggleLanguage={toggleLanguage} />
       
       <div className="flex-grow pt-28 pb-12 px-4 sm:px-6">
         <div className="max-w-5xl mx-auto">
@@ -66,15 +103,13 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                         className="flex items-center text-gray-500 hover:text-gray-900 transition mb-2 text-sm"
                     >
                         <ArrowLeft className="w-4 h-4 mr-1" />
-                        Back to Dashboard
+                        {currentT.back}
                     </button>
                     <h1 className="text-3xl font-bold text-gray-900">
-                        {isDoctor ? 'Patient Appointments' : 'My Appointments'}
+                        {isDoctor ? currentT.doctorTitle : currentT.patientTitle}
                     </h1>
                     <p className="text-gray-600 mt-1">
-                        {isDoctor 
-                            ? 'Manage your incoming consultation requests.' 
-                            : 'Track your upcoming and past visits.'}
+                        {isDoctor ? currentT.doctorDesc : currentT.patientDesc}
                     </p>
                 </div>
                 {!isDoctor && (
@@ -83,22 +118,20 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                         className="hidden sm:flex items-center px-5 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition shadow-md font-semibold"
                     >
                         <Stethoscope className="w-4 h-4 mr-2" />
-                        Book New
+                        {currentT.bookNew}
                     </button>
                 )}
             </div>
 
             <div className="grid gap-6">
                 {loading ? (
-                    <div className="text-center py-20 text-gray-500">Loading appointments...</div>
+                    <div className="text-center py-20 text-gray-500">{currentT.loading}</div>
                 ) : appointments.length === 0 ? (
                     <div className="text-center py-20 bg-white rounded-3xl shadow-sm border border-gray-100 animate-fade-in">
                         <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                        <h3 className="text-xl font-medium text-gray-900">No appointments found</h3>
+                        <h3 className="text-xl font-medium text-gray-900">{currentT.noAppt}</h3>
                         <p className="text-gray-500 mt-2">
-                            {isDoctor 
-                             ? "You don't have any patient bookings yet." 
-                             : "You don't have any scheduled consultations."}
+                            {isDoctor ? currentT.noApptDoctor : currentT.noApptPatient}
                         </p>
                     </div>
                 ) : (
@@ -140,7 +173,7 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                                         </div>
                                         
                                         <div className="mt-3 inline-block bg-gray-50 px-3 py-1 rounded-lg text-sm text-gray-600 border border-gray-200">
-                                            <span className="font-medium text-gray-700 mr-1">Reason:</span> 
+                                            <span className="font-medium text-gray-700 mr-1">{currentT.reason}</span> 
                                             {appt.reason || "No reason provided"}
                                         </div>
 
@@ -149,7 +182,7 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                                             <div className="mt-3 bg-blue-50 border border-blue-100 p-3 rounded-lg text-sm text-blue-800 flex items-start">
                                                 <MessageSquare className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
                                                 <div>
-                                                    <span className="font-bold">Doctor's Update:</span> {appt.doctor_note}
+                                                    <span className="font-bold">{currentT.doctorNote}</span> {appt.doctor_note}
                                                 </div>
                                             </div>
                                         )}
@@ -168,13 +201,13 @@ const AppointmentsPage = ({ onNavigate, user, onLogout }) => {
                                                 onClick={() => handleStatusUpdate(appt.id, 'confirmed')}
                                                 className="flex-1 px-3 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition shadow-sm"
                                             >
-                                                Accept
+                                                {currentT.accept}
                                             </button>
                                             <button 
                                                 onClick={() => handleStatusUpdate(appt.id, 'cancelled')}
                                                 className="flex-1 px-3 py-2 bg-white text-red-600 border border-red-200 text-sm font-medium rounded-lg hover:bg-red-50 transition"
                                             >
-                                                Decline
+                                                {currentT.decline}
                                             </button>
                                         </div>
                                     )}
