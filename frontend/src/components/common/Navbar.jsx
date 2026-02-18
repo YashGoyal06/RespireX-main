@@ -1,5 +1,5 @@
 import React from 'react';
-import { LogOut, ArrowLeft, X, User } from 'lucide-react';
+import { LogOut, ArrowLeft, X, User, Globe } from 'lucide-react';
 
 const Navbar = ({ 
   isLoggedIn, 
@@ -12,7 +12,9 @@ const Navbar = ({
   showBackButton, 
   showCancelButton,
   onNavigate,
-  displayName 
+  displayName,
+  language,         // <--- New Prop
+  toggleLanguage    // <--- New Prop
 }) => {
   const DOCTOR_DEFAULT_IMG = "/doctorpfp.jpg"; 
   const PATIENT_MALE_IMG = "/male.jpg";
@@ -72,6 +74,17 @@ const Navbar = ({
           {/* Buttons Section */}
           <div className="flex items-center space-x-4">
             
+            {/* --- LANGUAGE TOGGLE --- */}
+            {toggleLanguage && (
+              <button 
+                onClick={toggleLanguage}
+                className="flex items-center space-x-1 px-3 py-2 bg-white/50 hover:bg-white rounded-lg transition text-gray-700 font-semibold text-sm border border-gray-200"
+              >
+                <Globe className="w-4 h-4" />
+                <span>{language === 'en' ? 'EN' : 'हिंदी'}</span>
+              </button>
+            )}
+
             {/* Back Button */}
             {showBackButton && onBack && (
               <button
