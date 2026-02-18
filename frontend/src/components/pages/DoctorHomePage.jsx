@@ -21,6 +21,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const [showRescheduleModal, setShowRescheduleModal] = useState(false);
   const [selectedApptId, setSelectedApptId] = useState(null);
   const [rescheduleNote, setRescheduleNote] = useState("");
+  const [rescheduleDate, setRescheduleDate] = useState(""); // New state for date picker
 
   const states = [
     'All States', 'Andhra Pradesh', 'Bihar', 'Gujarat', 'Karnataka', 
@@ -118,17 +119,28 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
   const openRescheduleModal = (id) => {
     setSelectedApptId(id);
     setRescheduleNote("");
+    setRescheduleDate(""); // Reset date on open
     setShowRescheduleModal(true);
   };
 
   const submitReschedule = async () => {
     try {
-      // We use 'cancelled' status but send the note so patient knows to re-book
-      await api.patch(`/appointments/${selectedApptId}/status/`, { 
-        status: 'cancelled',
+      const payload = { 
         doctor_note: rescheduleNote 
-      });
-      alert("Update sent to patient successfully.");
+      };
+
+      // If a date is picked, we CONFIRM the move. 
+      // If no date is picked, we CANCEL and ask them to rebook.
+      if (rescheduleDate) {
+        payload.status = 'confirmed';
+        payload.new_date_time = rescheduleDate;
+      } else {
+        payload.status = 'cancelled';
+      }
+
+      await api.patch(`/appointments/${selectedApptId}/status/`, payload);
+      
+      alert(rescheduleDate ? "Appointment rescheduled & confirmed successfully." : "Update sent to patient successfully.");
       setShowRescheduleModal(false);
       fetchAppointments();
     } catch (err) {
@@ -202,18 +214,36 @@ const DoctorHomePage = ({ onNavigate, onLogout, user }) => {
               <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 animate-scale">
                   <h3 className="text-xl font-bold text-gray-900 mb-4">Reschedule / Add Comment</h3>
                   <p className="text-sm text-gray-500 mb-4">
-                      Add a note for the patient. This will update the status to "Needs Rescheduling" (Cancelled) and email the patient your message.
+                      Select a new date to automatically update and confirm the appointment, or just add a note to cancel and request re-booking.
                   </p>
-                  <textarea 
-                      className="w-full p-3 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-blue-500 outline-none"
-                      rows="4"
-                      placeholder="e.g., I am unavailable at this time. Please book a slot after 2 PM."
-                      value={rescheduleNote}
-                      onChange={(e) => setRescheduleNote(e.target.value)}
-                  ></textarea>
+                  
+                  {/* DATE PICKER ADDED HERE */}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">New Date & Time (Optional)</label>
+                    <input 
+                      type="datetime-local"
+                      className="w-full p-3 border border-gray-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                      value={rescheduleDate}
+                      onChange={(e) => setRescheduleDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Doctor's Note</label>
+                    <textarea 
+                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm"
+                        rows="3"
+                        placeholder="e.g., I have a conflict at the original time. Please see the new time proposed."
+                        value={rescheduleNote}
+                        onChange={(e) => setRescheduleNote(e.target.value)}
+                    ></textarea>
+                  </div>
+
                   <div className="flex justify-end space-x-3">
-                      <button onClick={() => setShowRescheduleModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancel</button>
-                      <button onClick={submitReschedule} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Send Update</button>
+                      <button onClick={() => setShowRescheduleModal(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Close</button>
+                      <button onClick={submitReschedule} className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                        {rescheduleDate ? 'Reschedule & Confirm' : 'Send Update'}
+                      </button>
                   </div>
               </div>
           </div>
