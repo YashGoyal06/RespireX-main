@@ -4,7 +4,7 @@ import Navbar from '../common/Navbar';
 import Footer from '../common/Footer';
 
 // Receive Theme Props from App.jsx
-const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLanguage }) => { 
+const PatientHomePage = ({ onNavigate, onLogout, user, language = 'en', toggleLanguage, darkMode, toggleTheme }) => {
   
   const t = {
     en: {
