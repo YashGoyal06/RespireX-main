@@ -184,7 +184,9 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
 
   const handleLocateClinic = () => {
     const query = language === 'hi' ? 'टीबी विशेषज्ञ निकट' : 'TB specialists near me';
-    window.open(`http://googleusercontent.com/maps.google.com/?q=${query}`, '_blank');
+    // Properly encode the query and use the correct Google Maps search URL
+    const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
+    window.open(mapsUrl, '_blank', 'noopener,noreferrer');
   };
 
   return (
