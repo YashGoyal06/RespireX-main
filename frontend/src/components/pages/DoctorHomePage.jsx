@@ -281,7 +281,7 @@ const DoctorHomePage = ({ onNavigate, onLogout, user, darkMode, toggleTheme }) =
              <div className="animate-fade-in">
                 <div className="grid md:grid-cols-3 gap-6 mb-8">
                     {[
-                    { icon: Users, label: "Total Patients", value: stats.total || 0, gradient: "from-blue-500 to-blue-600" },
+                    { icon: Users, label: "Total Cases", value: stats.total || 0, gradient: "from-blue-500 to-blue-600" },
                     { icon: CheckCircle, label: "Negative Cases", value: stats.negative || 0, gradient: "from-green-500 to-green-600" },
                     { icon: AlertCircle, label: "Positive Cases", value: stats.positive || 0, gradient: "from-orange-500 to-orange-600" },
                     ].map((stat, idx) => (
