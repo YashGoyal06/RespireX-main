@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Activity, Loader, Mail, ShieldCheck, MapPin, QrCode } from 'lucide-react';
+import React, { useState } from 'react';
+import { CheckCircle, AlertTriangle, Download, Share2, Home, FileText, Pill, Activity, Loader, Mail, ShieldCheck, MapPin } from 'lucide-react';
 import Navbar from '../common/Navbar';
 import api from '../../lib/api';
 
@@ -18,8 +18,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
   const uploadDate = resultData?.uploadDate 
     ? new Date(resultData.uploadDate).toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' })
     : new Date().toLocaleDateString(language === 'hi' ? 'hi-IN' : 'en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-
-  const blockchainHash = `0x${resultId.toString().split('').map(c => c.charCodeAt(0).toString(16)).join('')}f9a2b3c...`;
 
   const t = {
     en: {
@@ -53,9 +51,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
         viewHistory: "View History",
         regimenNote: "Standard First-Line Regimen (Subject to Doctor's Prescription)",
         supplementNote: "Supplements to boost respiratory health",
-        verified: "Blockchain Verified Record",
-        verifiedDesc: "This report is immutable and secured on the RespireX Ledger.",
-        txnHash: "Transaction Hash:",
         findClinic: "Find Nearby Clinics",
         scanQr: "Scan for Doctor Access",
         qrDesc: "Share this QR code with your specialist for instant access to digital records."
@@ -91,9 +86,6 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
         viewHistory: "इतिहास देखें",
         regimenNote: "मानक प्रथम-पंक्ति उपचार (डॉक्टर की पर्ची के अधीन)",
         supplementNote: "श्वसन स्वास्थ्य को बढ़ावा देने के लिए पूरक",
-        verified: "ब्लॉकचेन सत्यापित रिकॉर्ड",
-        verifiedDesc: "यह रिपोर्ट अपरिवर्तनीय है और रेस्पायरएक्स लेज़र पर सुरक्षित है।",
-        txnHash: "ट्रांजेक्शन हैश:",
         findClinic: "निकटतम क्लीनिक खोजें",
         scanQr: "डॉक्टर एक्सेस के लिए स्कैन करें",
         qrDesc: "डिजिटल रिकॉर्ड तक त्वरित पहुंच के लिए इस क्यूआर कोड को अपने विशेषज्ञ के साथ साझा करें।"
@@ -318,23 +310,7 @@ const TestResultPage = ({ onNavigate, resultData, onLogout, user, symptomAnswers
             </div>
             
             <div className="mt-12 pt-8 border-t border-gray-100 dark:border-gray-700 text-left bg-gray-50 dark:bg-gray-700/50 -mx-12 -mb-12 px-12 pb-8">
-              <div className="flex flex-col md:flex-row items-center justify-between gap-6">
-                
-                <div className="flex items-start space-x-3 flex-1">
-                   <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
-                      <ShieldCheck className="w-6 h-6" />
-                   </div>
-                   <div>
-                      <h4 className="font-bold text-gray-900 dark:text-white flex items-center">
-                         {currentT.verified} 
-                         <CheckCircle className="w-4 h-4 text-green-500 ml-2" />
-                      </h4>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{currentT.verifiedDesc}</p>
-                      <div className="mt-2 text-[10px] font-mono bg-gray-200 dark:bg-gray-600 p-2 rounded text-gray-600 dark:text-gray-300 break-all border border-gray-300 dark:border-gray-500">
-                         {currentT.txnHash} {blockchainHash}
-                      </div>
-                   </div>
-                </div>
+              <div className="flex flex-col md:flex-row items-center justify-center gap-6">
 
                 <div className="flex items-center space-x-4 bg-white dark:bg-gray-800 p-3 rounded-xl border border-gray-200 dark:border-gray-600 shadow-sm">
                    <img 
