@@ -1,15 +1,10 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Check, Volume2, Mic, MicOff, StopCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Check, Volume2 } from 'lucide-react';
 import Navbar from '../common/Navbar';
 
 const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogout, user, language = 'en', toggleLanguage, darkMode, toggleTheme }) => {
   const [currentQuestion, setCurrentQuestion] = useState(0);
-  
-  // --- VOICE FEATURES STATE ---
-  const [isListening, setIsListening] = useState(false);
   const [autoSpeak, setAutoSpeak] = useState(false); 
-  const [voiceError, setVoiceError] = useState('');
-  const recognitionRef = useRef(null);
 
   const t = {
     en: {
@@ -20,11 +15,7 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       privacyText: "Your responses are confidential and used only for screening purposes",
       yes: "Yes",
       no: "No",
-      autoSpeak: "Auto-Read Questions",
-      listening: "Listening...",
-      speakNow: "Speak 'Yes' or 'No' now...",
-      errorMic: "Microphone access denied or not supported.",
-      errorNoMatch: "Could not understand. Please try again."
+      autoSpeak: "Auto-Read Questions"
     },
     hi: {
       progress: "पूर्ण",
@@ -34,11 +25,7 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
       privacyText: "आपकी प्रतिक्रियाएं गोपनीय हैं और केवल स्क्रीनिंग उद्देश्यों के लिए उपयोग की जाती हैं",
       yes: "हाँ",
       no: "नहीं",
-      autoSpeak: "प्रश्न ऑटो-रीड करें",
-      listening: "सुन रहा हूँ...",
-      speakNow: "'हाँ' या 'नहीं' बोलें...",
-      errorMic: "माइक्रोफ़ोन एक्सेस अस्वीकृत या समर्थित नहीं है।",
-      errorNoMatch: "समझ नहीं पाया। कृपया पुनः प्रयास करें।"
+      autoSpeak: "प्रश्न ऑटो-रीड करें"
     }
   };
 
@@ -127,63 +114,8 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
   useEffect(() => {
     return () => {
       window.speechSynthesis.cancel();
-      if (recognitionRef.current) recognitionRef.current.stop();
     };
   }, []);
-
-  const handleVoiceInput = () => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
-    if (!SpeechRecognition) {
-      alert("Voice input is not supported in this browser. Please use Chrome or Edge.");
-      return;
-    }
-
-    if (isListening) {
-      if (recognitionRef.current) recognitionRef.current.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
-    
-    recognition.lang = language === 'hi' ? 'hi-IN' : 'en-US';
-    recognition.continuous = false;
-    recognition.interimResults = false;
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      setVoiceError('');
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.onerror = (event) => {
-      console.error("Speech error", event.error);
-      setVoiceError(currentT.errorMic);
-      setIsListening(false);
-    };
-
-    recognition.onresult = (event) => {
-      const transcript = event.results[0][0].transcript.toLowerCase().trim();
-      const yesWords = ['yes', 'yeah', 'yep', 'correct', 'right', 'haan', 'ha', 'ji', 'sahi', 'han'];
-      const noWords = ['no', 'nope', 'nah', 'incorrect', 'nahi', 'na', 'galat', 'n'];
-
-      if (yesWords.some(w => transcript.includes(w))) {
-        handleAnswer(currentT.yes);
-      } else if (noWords.some(w => transcript.includes(w))) {
-        handleAnswer(currentT.no);
-      } else {
-        setVoiceError(`${currentT.errorNoMatch} ("${transcript}")`);
-        speakQuestion(language === 'hi' ? "समझ नहीं पाया" : "Could not understand");
-      }
-    };
-
-    recognition.start();
-  };
 
   const handleAnswer = (answer) => {
     let standardAnswer = "No";
@@ -262,13 +194,6 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
 
           <div className="bg-white dark:bg-gray-800 rounded-3xl shadow-2xl border border-gray-100 dark:border-gray-700 p-8 md:p-12 animate-scale relative transition-colors">
             
-            {voiceError && (
-              <div className="absolute top-4 left-0 right-0 mx-auto w-max px-4 py-2 bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300 rounded-full text-sm font-semibold flex items-center animate-bounce">
-                <MicOff className="w-4 h-4 mr-2" />
-                {voiceError}
-              </div>
-            )}
-
             <div className="mb-12">
               <div className="flex justify-between items-start mb-6">
                 <div className="inline-block px-4 py-2 bg-blue-50 dark:bg-blue-900/30 rounded-full">
@@ -302,26 +227,6 @@ const SymptomTestPage = ({ onNavigate, symptomAnswers, setSymptomAnswers, onLogo
                   </div>
                 </button>
               ))}
-            </div>
-
-            <div className="mt-8 flex flex-col items-center">
-                <p className="text-sm text-gray-500 dark:text-gray-400 mb-3 font-medium">
-                  {isListening ? (
-                    <span className="text-red-600 dark:text-red-400 animate-pulse">{currentT.listening}</span>
-                  ) : (
-                    currentT.speakNow
-                  )}
-                </p>
-                <button 
-                  onClick={handleVoiceInput}
-                  className={`w-16 h-16 rounded-full flex items-center justify-center shadow-lg transition-all transform hover:scale-105 ${
-                    isListening 
-                      ? 'bg-red-500 text-white ring-4 ring-red-200 dark:ring-red-900 animate-pulse' 
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                  }`}
-                >
-                  {isListening ? <StopCircle className="w-8 h-8" /> : <Mic className="w-8 h-8" />}
-                </button>
             </div>
 
             {currentQuestion > 0 && (
